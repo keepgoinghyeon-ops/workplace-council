@@ -38,7 +38,15 @@ export default function App() {
               <div className="popup-bubble-tail" />
             </div>
             <div className="popup-mascot-wrap">
-              <img src="/mascot.jpg" alt="직협 마스코트" className="popup-mascot" />
+              <img
+                src={`${import.meta.env.BASE_URL}mascot.jpg`}
+                alt="직협 마스코트"
+                className="popup-mascot"
+                onError={(e) => {
+                  e.target.style.display = "none";
+                  e.target.parentNode.innerHTML = '<span style="font-size:80px">🐬</span>';
+                }}
+              />
             </div>
             <div className="popup-actions">
               <button
