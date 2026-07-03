@@ -33,6 +33,10 @@ export default function PageAbout({ onNavigate }) {
     <>
       {/* 히어로 */}
       <section className="hero">
+        <span className="hero-deco hero-deco-1">🌿</span>
+        <span className="hero-deco hero-deco-2">🌸</span>
+        <span className="hero-deco hero-deco-3">🌾</span>
+        <span className="hero-deco hero-deco-4">🌼</span>
         <div className="hero-eyebrow">고용노동부 공무원 직장협의회</div>
         <h1>직장협의회가 함께합니다.</h1>
         <p>
