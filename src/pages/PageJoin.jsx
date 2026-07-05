@@ -89,7 +89,7 @@ const JOIN_STEPS = [
   { title: "자격 확인", desc: "고용노동부 본부, 지방노동관서, 노동위원회 등 소속 공무원이면 누구나 가입 가능합니다." },
   { title: "가입 신청서 작성", desc: "'가입 신청' 페이지에서 입회원서와 자동이체 신청서를 온라인으로 작성·서명합니다." },
   { title: "운영진 검토 및 승인", desc: "신청 내용 확인 후 소속 지역 직협 담당자가 승인 여부를 안내드립니다." },
-  { title: "회비 자동이체 등록", desc: "연회비 3,600원(월 300원)이 지정 계좌에서 자동이체됩니다." },
+  { title: "직협회비 안내", desc: "직협 회비는 봉급의 0.6%로 급여에서 원천징수합니다." },
   { title: "회원 활동 시작", desc: "소송비용·경조사·질병 지원 등 각종 회원 혜택을 바로 이용하실 수 있습니다." },
 ];
 
@@ -135,13 +135,6 @@ export default function PageJoin() {
               </div>
             ))}
           </div>
-          <div className="law-box" style={{ marginBottom: 0 }}>
-            <h4>💳 연회비 안내</h4>
-            <p>
-              연회비: <strong>3,600원</strong> (월 300원 / 자동이체)<br />
-              * 가입 신청 페이지에서 은행·계좌번호·이체일을 직접 입력하시면 됩니다.
-            </p>
-          </div>
         </div>
       </section>
 
@@ -163,28 +156,6 @@ export default function PageJoin() {
               </div>
             ))}
           </div>
-
-          {/* 본부 단위직협 */}
-          <div className="org-table-wrap" style={{ maxWidth: 860, margin: "0 auto" }}>
-            <table className="org-table">
-              <thead>
-                <tr>
-                  <th>단위직협</th><th>회장</th><th>부회장</th><th>사무국장(총무)</th><th>기타임원</th>
-                </tr>
-              </thead>
-              <tbody>
-                {HQ_UNIT.map((r, i) => (
-                  <tr key={i}>
-                    <td><span className="badge-hq">{r.unit}</span></td>
-                    <td style={{ fontWeight: 700 }}>{r.president}</td>
-                    <td>{r.vp}</td>
-                    <td>{r.secretary}</td>
-                    <td style={{ fontSize: 13, color: "var(--text-soft)" }}>{r.etc}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       </section>
 
@@ -194,6 +165,43 @@ export default function PageJoin() {
           <div className="section-header">
             <h2 className="section-title">전국 단위직협 임원현황</h2>
             <p className="section-sub">2026.06.30 기준 · 총 {BRANCHES.length}개 단위직협</p>
+          </div>
+
+          {/* 본부 단위직협 현황 */}
+          <div style={{ marginBottom: 40 }}>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              background: "var(--primary)",
+              color: "#fff", padding: "6px 18px", borderRadius: "20px",
+              fontSize: 14, fontWeight: 700, marginBottom: 12,
+            }}>
+              본부 단위직협 현황
+            </div>
+
+            <div className="org-table-wrap">
+              <table className="org-table">
+                <thead>
+                  <tr>
+                    <th>단위직협</th>
+                    <th>회장</th>
+                    <th>부회장</th>
+                    <th>사무국장(총무)</th>
+                    <th>기타임원</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {HQ_UNIT.map((r, i) => (
+                    <tr key={i}>
+                      <td><span className="badge-hq">{r.unit}</span></td>
+                      <td style={{ fontWeight: 700 }}>{r.president}</td>
+                      <td>{r.vp}</td>
+                      <td>{r.secretary}</td>
+                      <td style={{ fontSize: 13, color: "var(--text-soft)" }}>{r.etc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {Object.entries(grouped).map(([region, rows]) => (
@@ -249,7 +257,8 @@ export default function PageJoin() {
             <h4>📌 안내사항</h4>
             <p>
               개별 연락처는 다우리 조직도를 참고해주세요.<br />
-              공석인 직위는 현재 선임 절차 진행 중이거나 임시 대행 중일 수 있습니다.
+              공석인 직위는 현재 선임 절차 진행 중이거나 임시 대행 중일 수 있습니다.<br />
+              직협에 대한 문의사항은 본조 운영진이나, 해당 지청 직협의장에게 언제든지 문의해주세요.
             </p>
           </div>
         </div>

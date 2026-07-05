@@ -31,6 +31,8 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_SURVEY_SUBMIT_URL: ${{ secrets.VITE_SURVEY_SUBMIT_URL }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

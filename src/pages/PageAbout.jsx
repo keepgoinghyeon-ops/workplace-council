@@ -1,3 +1,63 @@
+const LeafSvg = ({ color = "#7ec8e3" }) => (
+  <svg viewBox="0 0 80 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M40 5C25 25 10 50 15 75C18 88 30 95 40 98C50 95 62 88 65 75C70 50 55 25 40 5Z"
+      fill={color}
+      opacity="0.6"
+    />
+    <path d="M40 20V90" stroke={color} strokeWidth="2" opacity="0.5" />
+    <path d="M40 40C30 45 20 50 15 55" stroke={color} strokeWidth="1.5" opacity="0.4" />
+    <path d="M40 55C50 60 60 65 65 70" stroke={color} strokeWidth="1.5" opacity="0.4" />
+  </svg>
+);
+
+const FEATURES = [
+  {
+    key: "yellow",
+    title: "전국",
+    sub: "지방노동관서 · 노동위원회",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+      </svg>
+    ),
+    leafColor: "#e8c547",
+  },
+  {
+    key: "green",
+    title: "누구나",
+    sub: "고용노동부 소속 공무원",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+      </svg>
+    ),
+    leafColor: "#7ec87e",
+  },
+  {
+    key: "blue",
+    title: "법정",
+    sub: "공식 협의기구",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 3L4 9v2h16V9L12 3zm-1 7v8h2v-8h-2zm4 0v8h2v-8h-2zM6 19h12v2H6v-2z" />
+      </svg>
+    ),
+    leafColor: "#7eb8e8",
+  },
+  {
+    key: "purple",
+    title: "함께",
+    sub: "더 나은 공직생활을 위해",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+      </svg>
+    ),
+    leafColor: "#c49ee8",
+  },
+];
+
 export default function PageAbout({ onNavigate }) {
   const roles = [
     {
@@ -33,47 +93,51 @@ export default function PageAbout({ onNavigate }) {
     <>
       {/* 히어로 */}
       <section className="hero">
-        <span className="hero-deco hero-deco-1">🌿</span>
-        <span className="hero-deco hero-deco-2">🌸</span>
-        <span className="hero-deco hero-deco-3">🌾</span>
-        <span className="hero-deco hero-deco-4">🌼</span>
-        <div className="hero-eyebrow">고용노동부 공무원 직장협의회</div>
-        <h1>직장협의회가 함께합니다.</h1>
-        <p>
-          처음 공직에 들어와 낯선 업무와 조직문화에 적응하는 일,<br />
-          현장에서 묵묵히 일하면서도 말하지 못한 어려움을 혼자 감당하는 일.<br />
-          <strong>이제 혼자 고민하지 마십시오.</strong>
-        </p>
-        <div className="hero-cta-row">
-          <button className="btn btn-primary" onClick={() => onNavigate(4)}>
-            지금 바로 가입하기 →
-          </button>
-          <button className="btn btn-outline" onClick={() => onNavigate(2)}>
-            가입 안내 보기
-          </button>
+        <div className="hero-deco hero-deco--blob1" />
+        <div className="hero-deco hero-deco--blob2" />
+        <div className="hero-deco hero-deco--blob3" />
+        <div className="hero-deco hero-deco--leaf-left">
+          <LeafSvg color="#7ec8e3" />
+        </div>
+        <div className="hero-deco hero-deco--leaf-right">
+          <LeafSvg color="#7ec8e3" />
+        </div>
+
+        <div className="hero-inner">
+          <div className="hero-eyebrow">고용노동부 공무원 직장협의회</div>
+          <h1>직장협의회가 함께 합니다.</h1>
+          <p>
+            처음 공직에 들어와 낯선 업무와 조직문화에 적응하는 일,<br />
+            현장에서 묵묵히 일하면서도 말하지 못한 어려움을 혼자 감당하는 일.<br />
+            <strong>이제 혼자 고민하지 마십시오.</strong>
+          </p>
+          <div className="hero-cta-row">
+            <button className="btn btn-primary" onClick={() => onNavigate(4)}>
+              지금 바로 가입하기 →
+            </button>
+            <button className="btn btn-outline" onClick={() => onNavigate(2)}>
+              가입 안내 보기
+            </button>
+          </div>
         </div>
       </section>
 
-      {/* 통계 */}
-      <div className="stat-strip">
-        <div className="stat-strip-inner">
-          <div>
-            <div className="stat-num">전국</div>
-            <div className="stat-label">지방노동관서·노동위원회</div>
+      {/* 4단 특징 */}
+      <div className="feature-strip">
+        {FEATURES.map((f) => (
+          <div key={f.key} className={`feature-col feature-col--${f.key}`}>
+            <div className={`feature-icon feature-icon--${f.key === "yellow" ? "orange" : f.key}`}>
+              {f.icon}
+            </div>
+            <div className={`feature-title feature-title--${f.key === "yellow" ? "orange" : f.key}`}>
+              {f.title}
+            </div>
+            <div className="feature-sub">{f.sub}</div>
+            <div className={`feature-leaf ${f.key === "yellow" || f.key === "green" ? "feature-leaf--left" : "feature-leaf--right"}`}>
+              <LeafSvg color={f.leafColor} />
+            </div>
           </div>
-          <div>
-            <div className="stat-num">누구나</div>
-            <div className="stat-label">고용노동부 소속 공무원</div>
-          </div>
-          <div>
-            <div className="stat-num">법정</div>
-            <div className="stat-label">공식 협의기구</div>
-          </div>
-          <div>
-            <div className="stat-num">함께</div>
-            <div className="stat-label">더 나은 공직생활을 위해</div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* 누가 가입할 수 있나요 */}
