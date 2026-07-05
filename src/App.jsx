@@ -4,6 +4,7 @@ import PageJoin from "./pages/PageJoin";
 import PageBenefits from "./pages/PageBenefits";
 import PageSignup from "./pages/PageSignup";
 import PageWebtoon from "./pages/PageWebtoon";
+import PageSurvey from "./pages/PageSurvey";
 import "./index.css";
 
 const NAV_ITEMS = [
@@ -12,18 +13,34 @@ const NAV_ITEMS = [
   { id: 3, label: "회원 혜택" },
   { id: 4, label: "가입 신청" },
   { id: 5, label: "📖 직협 웹툰", highlight: true },
+  { id: 6, label: "베스트, 워스트 설문" },
 ];
+
+const POPUP_HIDE_KEY = "wc-popup-hide-date";
+
+const getTodayKey = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
+
+const isPopupHiddenToday = () => localStorage.getItem(POPUP_HIDE_KEY) === getTodayKey();
 
 export default function App() {
   const [activePage, setActivePage] = useState(1);
   const [showPopup, setShowPopup] = useState(false);
 
   useEffect(() => {
+    if (isPopupHiddenToday()) return;
     const timer = setTimeout(() => setShowPopup(true), 600);
     return () => clearTimeout(timer);
   }, []);
 
   const closePopup = () => setShowPopup(false);
+
+  const dismissPopupToday = () => {
+    localStorage.setItem(POPUP_HIDE_KEY, getTodayKey());
+    closePopup();
+  };
 
   return (
     <div className="app">
@@ -56,7 +73,13 @@ export default function App() {
               >
                 지금 가입하기 →
               </button>
-              <button className="popup-dismiss" onClick={closePopup}>닫기</button>
+              <div className="popup-footer-actions">
+                <button className="popup-dismiss" onClick={dismissPopupToday}>
+                  오늘 그만보기
+                </button>
+                <span className="popup-footer-divider">|</span>
+                <button className="popup-dismiss" onClick={closePopup}>닫기</button>
+              </div>
             </div>
           </div>
         </div>
@@ -90,6 +113,7 @@ export default function App() {
         {activePage === 3 && <PageBenefits onNavigate={setActivePage} />}
         {activePage === 4 && <PageSignup />}
         {activePage === 5 && <PageWebtoon />}
+        {activePage === 6 && <PageSurvey />}
       </main>
 
       {/* ── 푸터 ── */}
