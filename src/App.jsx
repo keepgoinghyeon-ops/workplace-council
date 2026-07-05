@@ -5,6 +5,7 @@ import PageBenefits from "./pages/PageBenefits";
 import PageSignup from "./pages/PageSignup";
 import PageWebtoon from "./pages/PageWebtoon";
 import PageSurvey from "./pages/PageSurvey";
+import PageNotices from "./pages/PageNotices";
 import "./index.css";
 
 const NAV_ITEMS = [
@@ -12,6 +13,7 @@ const NAV_ITEMS = [
   { id: 2, label: "가입 안내 & 조직" },
   { id: 3, label: "회원 혜택" },
   { id: 4, label: "가입 신청" },
+  { id: 7, label: "공지사항" },
   { id: 5, label: "📖 직협 웹툰", highlight: true },
   { id: 6, label: "베스트, 워스트 설문" },
 ];
@@ -114,6 +116,7 @@ export default function App() {
         {activePage === 4 && <PageSignup />}
         {activePage === 5 && <PageWebtoon />}
         {activePage === 6 && <PageSurvey />}
+        {activePage === 7 && <PageNotices />}
       </main>
 
       {/* ── 푸터 ── */}

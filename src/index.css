@@ -685,6 +685,124 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ───────────────────────────────────────────
+   NOTICES PAGE
+─────────────────────────────────────────── */
+.notices-list-wrap { max-width: 820px; margin: 0 auto; }
+.notices-empty {
+  text-align: center; color: var(--text-soft);
+  padding: 48px 24px; font-size: 15px;
+}
+.notices-list { display: flex; flex-direction: column; gap: 14px; }
+
+.notice-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.2s;
+}
+.notice-card:hover { box-shadow: var(--shadow); }
+.notice-card--pinned { border-color: var(--primary-l); border-left: 4px solid var(--primary); }
+
+.notice-card-header {
+  width: 100%; text-align: left; padding: 20px 24px;
+  background: none; border: none; cursor: pointer;
+  font-family: inherit;
+}
+.notice-card-meta {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap; margin-bottom: 8px;
+}
+.notice-badge {
+  font-size: 12px; font-weight: 700;
+  padding: 4px 10px; border-radius: 20px;
+}
+.notice-badge--규정 { background: #eef5fc; color: var(--hero-blue); }
+.notice-badge--행사 { background: #fff8e7; color: #c47d0a; }
+.notice-badge--공지 { background: #eef8f0; color: var(--col-green); }
+.notice-badge--기타 { background: #f5f5f5; color: var(--text-soft); }
+.notice-pin { font-size: 12px; color: var(--primary); font-weight: 600; }
+.notice-date { font-size: 12px; color: var(--text-light); margin-left: auto; }
+.notice-title { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.notice-preview { font-size: 13.5px; color: var(--text-soft); line-height: 1.7; }
+.notice-toggle { font-size: 12px; color: var(--primary); font-weight: 600; margin-top: 8px; display: inline-block; }
+
+.notice-card-body {
+  padding: 0 24px 24px;
+  border-top: 1px solid var(--border);
+}
+.notice-content {
+  font-size: 14px; color: var(--text);
+  line-height: 1.9; white-space: pre-wrap;
+  padding: 16px 0;
+}
+.notice-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px; margin-bottom: 16px;
+}
+.notice-gallery-item {
+  border-radius: var(--radius);
+  overflow: hidden; border: 1px solid var(--border);
+  aspect-ratio: 4/3;
+}
+.notice-gallery-item img {
+  width: 100%; height: 100%; object-fit: cover;
+  display: block; transition: transform 0.2s;
+}
+.notice-gallery-item:hover img { transform: scale(1.03); }
+
+.notice-files {
+  list-style: none; display: flex; flex-direction: column; gap: 8px;
+  margin-bottom: 12px;
+}
+.notice-files a {
+  font-size: 14px; color: var(--hero-blue);
+  text-decoration: none; font-weight: 500;
+}
+.notice-files a:hover { text-decoration: underline; }
+
+.notice-delete-btn {
+  font-size: 12px; color: #c0392b;
+  background: none; border: 1px solid #e8b4b4;
+  border-radius: 6px; padding: 6px 14px; cursor: pointer;
+  margin-top: 8px;
+}
+.notice-delete-btn:hover { background: #fdf0f0; }
+
+.notices-admin-panel {
+  max-width: 680px; margin: 0 auto;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 36px 32px;
+  box-shadow: var(--shadow);
+}
+.notices-admin-panel h3 {
+  font-size: 20px; font-weight: 700; margin-bottom: 8px;
+}
+.notices-admin-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.notices-file-hint {
+  font-size: 12px; color: var(--text-soft); margin-top: 6px;
+}
+.notices-success {
+  color: var(--col-green); font-size: 13px;
+  text-align: center; margin-bottom: 12px; font-weight: 600;
+}
+.notices-login-form .btn { width: 100%; justify-content: center; margin-top: 8px; }
+
+@media (max-width: 768px) {
+  .notice-card-header { padding: 16px 18px; }
+  .notice-card-body { padding: 0 18px 18px; }
+  .notices-admin-panel { padding: 24px 20px; }
+  .notice-date { margin-left: 0; width: 100%; }
+}
+
+/* ───────────────────────────────────────────
    WEBTOON PAGE
 ─────────────────────────────────────────── */
 .wt-hero {
