@@ -44,14 +44,66 @@ function writeLocalNotices(notices) {
   localStorage.setItem(LOCAL_KEY, JSON.stringify(notices));
 }
 
+function normalizeNetworkError(err) {
+  if (!err || err.message === "Failed to fetch" || err.name === "TypeError") {
+    return new Error(
+      "공지사항 서버에 연결할 수 없습니다. Google Apps Script 웹 앱 URL(/exec)과 '모든 사용자' 공개 설정을 확인해 주세요."
+    );
+  }
+  return err;
+}
+
+function normalizeApiResult(result) {
+  if (!result || typeof result !== "object") return { success: false, notices: [], error: "" };
+  return {
+    success: Boolean(result.success ?? result.성공),
+    notices: result.notices ?? result.알림 ?? [],
+    notice: result.notice ?? result.공지,
+    error: result.error ?? result.오류 ?? result.에러 ?? "",
+  };
+}
+
+async function apiGet(params) {
+  if (!API_URL) throw new Error("공지사항 API URL이 설정되지 않았습니다.");
+
+  const query = new URLSearchParams({ ...params, _: String(Date.now()) });
+  let response;
+  try {
+    response = await fetch(`${API_URL}?${query.toString()}`);
+  } catch (err) {
+    throw normalizeNetworkError(err);
+  }
+
+  let result;
+  try {
+    result = await response.json();
+  } catch {
+    throw new Error(
+      "Google Apps Script 응답을 읽을 수 없습니다. URL이 /exec 로 끝나는지 확인해 주세요."
+    );
+  }
+
+  if (!response.ok) {
+    const normalized = normalizeApiResult(result);
+    throw new Error(normalized.error || `서버 응답 오류 (${response.status})`);
+  }
+
+  return normalizeApiResult(result);
+}
+
 async function apiRequest(payload) {
   if (!API_URL) throw new Error("공지사항 API URL이 설정되지 않았습니다.");
 
-  const response = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(payload),
-  });
+  let response;
+  try {
+    response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    throw normalizeNetworkError(err);
+  }
 
   let result;
   try {
@@ -60,20 +112,24 @@ async function apiRequest(payload) {
     throw new Error("서버 응답을 확인할 수 없습니다.");
   }
 
-  if (!response.ok || !result.success) {
-    throw new Error(result.error || "요청에 실패했습니다.");
+  const normalized = normalizeApiResult(result);
+
+  if (!response.ok || !normalized.success) {
+    throw new Error(normalized.error || "요청에 실패했습니다.");
   }
 
-  return result;
+  return normalized;
 }
 
 export async function fetchNotices() {
   if (API_URL) {
-    const url = `${API_URL}?action=list&_=${Date.now()}`;
-    const response = await fetch(url);
-    const result = await response.json();
-    if (!result.success) throw new Error(result.error || "공지사항을 불러올 수 없습니다.");
-    return result.notices || [];
+    try {
+      const result = await apiGet({ action: "list" });
+      if (!result.success) throw new Error(result.error || "공지사항을 불러올 수 없습니다.");
+      return result.notices || [];
+    } catch (err) {
+      throw normalizeNetworkError(err);
+    }
   }
 
   return readLocalNotices().sort((a, b) => {
@@ -84,9 +140,13 @@ export async function fetchNotices() {
 
 export async function verifyAdminToken(token) {
   if (API_URL) {
-    const result = await apiRequest({ action: "auth", adminToken: token });
-    if (result.success) setAdminAuthenticated(true, token);
-    return result.success;
+    try {
+      const result = await apiGet({ action: "auth", adminToken: token });
+      if (result.success) setAdminAuthenticated(true, token);
+      return result.success;
+    } catch (err) {
+      throw normalizeNetworkError(err);
+    }
   }
 
   const localToken = import.meta.env.VITE_NOTICES_ADMIN_TOKEN?.trim() || "admin";

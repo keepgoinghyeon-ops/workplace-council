@@ -152,6 +152,11 @@ function doGet(e) {
     if (action === "list") {
       return jsonResponse({ success: true, notices: getNotices_() });
     }
+    if (action === "auth") {
+      return jsonResponse({
+        success: isAuthorized_((e.parameter && e.parameter.adminToken) || ""),
+      });
+    }
     return jsonResponse({ success: false, error: "unknown action" });
   } catch (err) {
     return jsonResponse({ success: false, error: String(err) });

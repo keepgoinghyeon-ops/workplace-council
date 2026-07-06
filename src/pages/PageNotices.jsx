@@ -62,7 +62,7 @@ export default function PageNotices() {
         setLoginError("비밀번호가 올바르지 않습니다.");
       }
     } catch (err) {
-      setLoginError(err.message);
+      setLoginError(err.message || "로그인에 실패했습니다.");
     }
   };
 
@@ -146,7 +146,18 @@ export default function PageNotices() {
             </div>
           )}
 
-          {showAdmin ? (
+          {isNoticesApiConfigured() && error && (
+            <div className="survey-setup-notice survey-setup-notice--warn">
+              ⚠️ {error}
+              <br />
+              <span className="notices-api-hint">
+                Apps Script → 배포 → 웹 앱 URL을 GitHub Secret <code>VITE_NOTICES_API_URL</code>에 넣고,
+                액세스 권한을 <strong>모든 사용자</strong>로 설정했는지 확인해 주세요.
+              </span>
+            </div>
+          )}
+
+          {showAdmin && (
             <div className="notices-admin-panel">
               {!isAdmin ? (
                 <form onSubmit={handleLogin} className="notices-login-form">
@@ -245,13 +256,13 @@ export default function PageNotices() {
                 </form>
               )}
             </div>
-          ) : (
-            <div className="notices-list-wrap">
-              {loading && <p className="notices-empty">불러오는 중...</p>}
-              {error && <p className="survey-error">{error}</p>}
-              {!loading && !error && notices.length === 0 && (
-                <p className="notices-empty">등록된 공지사항이 없습니다.</p>
-              )}
+          )}
+
+          <div className="notices-list-wrap">
+            {loading && <p className="notices-empty">불러오는 중...</p>}
+            {!loading && !error && notices.length === 0 && (
+              <p className="notices-empty">등록된 공지사항이 없습니다.</p>
+            )}
 
               <div className="notices-list">
                 {notices.map((notice) => {
@@ -336,7 +347,6 @@ export default function PageNotices() {
                 })}
               </div>
             </div>
-          )}
         </div>
       </section>
     </>
