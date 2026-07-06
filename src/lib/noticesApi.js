@@ -139,22 +139,30 @@ export async function fetchNotices() {
 }
 
 export async function verifyAdminToken(token) {
+  const trimmed = String(token || "").trim();
+  if (!trimmed) {
+    return { ok: false, error: "비밀번호를 입력해 주세요." };
+  }
+
   if (API_URL) {
     try {
-      const result = await apiGet({ action: "auth", adminToken: token });
-      if (result.success) setAdminAuthenticated(true, token);
-      return result.success;
+      const result = await apiGet({ action: "auth", adminToken: trimmed });
+      if (result.success) {
+        setAdminAuthenticated(true, trimmed);
+        return { ok: true };
+      }
+      return { ok: false, error: result.error || "비밀번호가 올바르지 않습니다." };
     } catch (err) {
       throw normalizeNetworkError(err);
     }
   }
 
   const localToken = import.meta.env.VITE_NOTICES_ADMIN_TOKEN?.trim() || "admin";
-  if (token === localToken) {
-    setAdminAuthenticated(true, token);
-    return true;
+  if (trimmed === localToken) {
+    setAdminAuthenticated(true, trimmed);
+    return { ok: true };
   }
-  return false;
+  return { ok: false, error: "비밀번호가 올바르지 않습니다." };
 }
 
 export async function fileToBase64(file) {

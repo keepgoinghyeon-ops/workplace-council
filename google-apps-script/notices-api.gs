@@ -49,9 +49,24 @@ function getDriveFolder_() {
   return DriveApp.createFolder(DRIVE_FOLDER_NAME);
 }
 
+function getAdminToken_() {
+  return PropertiesService.getScriptProperties().getProperty("NOTICES_ADMIN_TOKEN");
+}
+
 function isAuthorized_(token) {
-  var expected = PropertiesService.getScriptProperties().getProperty("NOTICES_ADMIN_TOKEN");
-  return expected && token === expected;
+  var expected = getAdminToken_();
+  return expected && String(token).trim() === String(expected).trim();
+}
+
+function checkAuth_(token) {
+  var expected = getAdminToken_();
+  if (!expected) {
+    return { ok: false, error: "NOTICES_ADMIN_TOKEN 스크립트 속성이 설정되지 않았습니다." };
+  }
+  if (String(token).trim() !== String(expected).trim()) {
+    return { ok: false, error: "비밀번호가 올바르지 않습니다." };
+  }
+  return { ok: true };
 }
 
 function getNotices_() {
@@ -153,8 +168,10 @@ function doGet(e) {
       return jsonResponse({ success: true, notices: getNotices_() });
     }
     if (action === "auth") {
+      var auth = checkAuth_((e.parameter && e.parameter.adminToken) || "");
       return jsonResponse({
-        success: isAuthorized_((e.parameter && e.parameter.adminToken) || ""),
+        success: auth.ok,
+        error: auth.error || "",
       });
     }
     return jsonResponse({ success: false, error: "unknown action" });

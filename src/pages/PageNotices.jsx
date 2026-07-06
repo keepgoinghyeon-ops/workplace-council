@@ -54,12 +54,12 @@ export default function PageNotices() {
     e.preventDefault();
     setLoginError("");
     try {
-      const ok = await verifyAdminToken(adminToken);
-      if (ok) {
+      const result = await verifyAdminToken(adminToken);
+      if (result.ok) {
         setIsAdmin(true);
         setLoginError("");
       } else {
-        setLoginError("비밀번호가 올바르지 않습니다.");
+        setLoginError(result.error || "비밀번호가 올바르지 않습니다.");
       }
     } catch (err) {
       setLoginError(err.message || "로그인에 실패했습니다.");
