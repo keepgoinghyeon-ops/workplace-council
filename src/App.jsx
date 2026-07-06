@@ -6,6 +6,9 @@ import PageSignup from "./pages/PageSignup";
 import PageWebtoon from "./pages/PageWebtoon";
 import PageSurvey from "./pages/PageSurvey";
 import PageNotices from "./pages/PageNotices";
+import PageSignupAdmin from "./pages/PageSignupAdmin";
+import PageMemberAuth from "./pages/PageMemberAuth";
+import { getMemberSession, logoutMember } from "./lib/membersApi";
 import "./index.css";
 
 const NAV_ITEMS = [
@@ -13,6 +16,8 @@ const NAV_ITEMS = [
   { id: 2, label: "가입 안내 & 조직" },
   { id: 3, label: "회원 혜택" },
   { id: 4, label: "가입 신청" },
+  { id: 9, label: "가입신청 관리" },
+  { id: 8, label: "회원가입·로그인" },
   { id: 7, label: "공지사항" },
   { id: 5, label: "📖 직협 웹툰", highlight: true },
   { id: 6, label: "베스트, 워스트 설문" },
@@ -30,6 +35,16 @@ const isPopupHiddenToday = () => localStorage.getItem(POPUP_HIDE_KEY) === getTod
 export default function App() {
   const [activePage, setActivePage] = useState(1);
   const [showPopup, setShowPopup] = useState(false);
+  const [member, setMember] = useState(getMemberSession());
+
+  const handleMemberLogin = (loggedInMember) => {
+    setMember(loggedInMember);
+  };
+
+  const handleMemberLogout = () => {
+    logoutMember();
+    setMember(null);
+  };
 
   useEffect(() => {
     if (isPopupHiddenToday()) return;
@@ -95,7 +110,7 @@ export default function App() {
             <span className="logo-title">전국 직장협의회</span>
           </div>
           <nav className="nav">
-            {NAV_ITEMS.map((item) => (
+            {NAV_ITEMS.filter((item) => !(member && item.id === 8)).map((item) => (
               <button
                 key={item.id}
                 className={`nav-btn ${activePage === item.id ? "active" : ""} ${item.highlight ? "nav-btn--highlight" : ""}`}
@@ -104,6 +119,12 @@ export default function App() {
                 {item.label}
               </button>
             ))}
+            {member ? (
+              <div className="nav-member">
+                <span className="nav-member-name">{member.name}님</span>
+                <button type="button" className="nav-member-logout" onClick={handleMemberLogout}>로그아웃</button>
+              </div>
+            ) : null}
           </nav>
         </div>
       </header>
@@ -114,9 +135,11 @@ export default function App() {
         {activePage === 2 && <PageJoin />}
         {activePage === 3 && <PageBenefits onNavigate={setActivePage} />}
         {activePage === 4 && <PageSignup />}
+        {activePage === 9 && <PageSignupAdmin />}
         {activePage === 5 && <PageWebtoon />}
         {activePage === 6 && <PageSurvey />}
         {activePage === 7 && <PageNotices />}
+        {activePage === 8 && <PageMemberAuth onLogin={handleMemberLogin} />}
       </main>
 
       {/* ── 푸터 ── */}

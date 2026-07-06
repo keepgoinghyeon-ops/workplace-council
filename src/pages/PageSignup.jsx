@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from "react";
+import { submitSignupApplication, isSignupApiConfigured } from "../lib/signupApi";
 
 const BANKS = [
   "국민은행","신한은행","우리은행","하나은행","농협은행","기업은행","SC제일은행",
   "카카오뱅크","토스뱅크","새마을금고","수협은행","우체국","기타",
 ];
 
-// ── 서명 캔버스 ─────────────────────────────────────────
-function SignaturePad({ label, onChange, sigData }) {
+function SignaturePad({ label, onChange }) {
   const canvasRef = useRef(null);
   const drawing = useRef(false);
   const [hasSignature, setHasSignature] = useState(false);
@@ -36,7 +36,7 @@ function SignaturePad({ label, onChange, sigData }) {
     <div style={{ marginBottom: 8 }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
         <span style={{ fontSize:13, fontWeight:700, color:"var(--text)" }}>{label}</span>
-        {hasSignature && <button onClick={clear} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer" }}>✕ 다시 서명</button>}
+        {hasSignature && <button type="button" onClick={clear} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer" }}>✕ 다시 서명</button>}
       </div>
       <canvas ref={canvasRef} width={400} height={100}
         onMouseDown={start} onMouseMove={draw} onMouseUp={stop} onMouseLeave={stop}
@@ -48,167 +48,9 @@ function SignaturePad({ label, onChange, sigData }) {
   );
 }
 
-// ── 인쇄용 문서 컴포넌트 ────────────────────────────────
-function PrintDocument({ member, bank, sig1, sig2, onClose }) {
-  const handlePrint = () => window.print();
-
-  return (
-    <div className="print-overlay">
-      <div className="print-modal">
-        {/* 화면에서만 보이는 툴바 */}
-        <div className="print-toolbar no-print">
-          <span style={{ fontWeight:700, fontSize:15 }}>🖨️ 인쇄 미리보기</span>
-          <div style={{ display:"flex", gap:10 }}>
-            <button className="btn btn-primary" onClick={handlePrint}>인쇄하기</button>
-            <button className="btn btn-outline" onClick={onClose}>닫기</button>
-          </div>
-        </div>
-
-        {/* 인쇄 영역 */}
-        <div className="print-area" id="print-area">
-
-          {/* ══ 입회원서 ══ */}
-          <div className="doc-page">
-            <div className="doc-header">
-              <div className="doc-stamp-area">
-                <div className="doc-stamp-box">결<br/>재</div>
-                <div className="doc-stamp-box"></div>
-                <div className="doc-stamp-box"></div>
-              </div>
-              <h1 className="doc-title">입 회 원 서</h1>
-              <p className="doc-org">고용노동부공무원직장협의회 귀중</p>
-            </div>
-
-            <table className="doc-table">
-              <tbody>
-                <tr>
-                  <th>성 명</th>
-                  <td>{member.name}</td>
-                  <th>생년월일</th>
-                  <td>{member.dob}</td>
-                </tr>
-                <tr>
-                  <th>주 소</th>
-                  <td colSpan={3}>{member.address || "—"}</td>
-                </tr>
-                <tr>
-                  <th>연락처</th>
-                  <td>{member.phone}</td>
-                  <th>신청일</th>
-                  <td>{member.joinDate}</td>
-                </tr>
-                <tr>
-                  <th>소속(기관명)</th>
-                  <td colSpan={3}>{member.affiliation}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div className="doc-body-text">
-              <p>
-                본인은 고용노동부공무원직장협의회 회원으로 가입하고자 하며,<br />
-                직장협의회 규약을 준수하고 회원으로서의 의무를 다할 것을 서약합니다.
-              </p>
-            </div>
-
-            <div className="doc-sign-row">
-              <span className="doc-date">{member.joinDate} &nbsp;&nbsp; 신청인</span>
-              <div className="doc-sig-box">
-                {sig1 ? <img src={sig1} alt="서명" style={{ width:"100%", height:"100%", objectFit:"contain" }} /> : <span className="doc-sig-placeholder">서명</span>}
-              </div>
-              <span className="doc-sig-label">(서명 또는 인)</span>
-            </div>
-
-            <div className="doc-footer-note">
-              * 지원 사항은 고용노동부공무원직장협의회 회계집행 및 자산관리규정에 근거하여 지원
-            </div>
-          </div>
-
-          {/* 페이지 구분선 */}
-          <div className="doc-divider no-print" />
-          <div className="doc-page-break" />
-
-          {/* ══ 원천징수동의서 (자동이체 신청서) ══ */}
-          <div className="doc-page">
-            <div className="doc-header">
-              <div className="doc-stamp-area">
-                <div className="doc-stamp-box">결<br/>재</div>
-                <div className="doc-stamp-box"></div>
-                <div className="doc-stamp-box"></div>
-              </div>
-              <h1 className="doc-title">자동이체 신청서</h1>
-              <p className="doc-sub-title">( 원천징수 동의서 )</p>
-              <p className="doc-org">고용노동부공무원직장협의회 귀중</p>
-            </div>
-
-            <table className="doc-table">
-              <tbody>
-                <tr>
-                  <th>신청인</th>
-                  <td>{member.name}</td>
-                  <th>소속</th>
-                  <td>{member.affiliation}</td>
-                </tr>
-                <tr>
-                  <th>예금주</th>
-                  <td>{bank.accountHolder}</td>
-                  <th>관 계</th>
-                  <td>{bank.relation}</td>
-                </tr>
-                <tr>
-                  <th>은행명</th>
-                  <td>{bank.bankName}</td>
-                  <th>계좌번호</th>
-                  <td>{bank.accountNumber}</td>
-                </tr>
-                <tr>
-                  <th>월 봉급액</th>
-                  <td>{bank.monthlySalary ? Number(bank.monthlySalary).toLocaleString()+"원" : "—"}</td>
-                  <th>월 이체금액</th>
-                  <td>{bank.monthlyFee ? Number(bank.monthlyFee).toLocaleString()+"원 (봉급의 0.6%)" : "—"}</td>
-                </tr>
-                <tr>
-                  <th>이체일</th>
-                  <td>매월 {bank.payDay}일</td>
-                  <th>이체 시작</th>
-                  <td>{bank.startDate ? bank.startDate.replace("-","년 ")+"월" : "—"}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div className="doc-body-text">
-              <p style={{ marginBottom:8 }}>위와 같이 자동이체를 신청합니다.</p>
-              <ol className="doc-notice-list">
-                <li>이체금액은 위에 표시한 금액으로 하되, 협의회 결정에 의거 변경될 수 있으며 변경 시 사전 통보합니다.</li>
-                <li>이체 금융기관의 사정으로 이체가 불능할 경우에는 직접 납부합니다.</li>
-                <li>이체에 필요한 사항은 고용노동부공무원직장협의회에 일임합니다.</li>
-              </ol>
-            </div>
-
-            <div className="doc-sign-row">
-              <span className="doc-date">{member.joinDate} &nbsp;&nbsp; 신청인</span>
-              <div className="doc-sig-box">
-                {sig2 ? <img src={sig2} alt="서명" style={{ width:"100%", height:"100%", objectFit:"contain" }} /> : <span className="doc-sig-placeholder">서명</span>}
-              </div>
-              <span className="doc-sig-label">(서명 또는 인)</span>
-            </div>
-
-            <div className="doc-footer-note">
-              * 고용노동부공무원직장협의회 회계집행 및 자산관리규정에 근거하여 처리됩니다.
-            </div>
-          </div>
-
-        </div>{/* /print-area */}
-      </div>
-    </div>
-  );
-}
-
-// ── 초기값 ───────────────────────────────────────────────
 const INIT_MEMBER = { name:"", dob:"", address:"", phone:"", affiliation:"", joinDate: new Date().toISOString().slice(0,10), agree:false };
 const INIT_BANK   = { accountHolder:"", relation:"본인", bankName:"", accountNumber:"", monthlySalary:"", monthlyFee:"", payDay:"25", startDate:"" };
 
-// ── 메인 ────────────────────────────────────────────────
 export default function PageSignup() {
   const [step, setStep]       = useState(1);
   const [member, setMember]   = useState(INIT_MEMBER);
@@ -216,7 +58,8 @@ export default function PageSignup() {
   const [sig1, setSig1]       = useState(null);
   const [sig2, setSig2]       = useState(null);
   const [errors, setErrors]   = useState({});
-  const [showPrint, setShowPrint] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const setM = (f) => (e) => setMember((p) => ({ ...p, [f]: e.target.type==="checkbox" ? e.target.checked : e.target.value }));
   const setB = (f) => (e) => setBank((p) => ({ ...p, [f]: e.target.value }));
@@ -244,45 +87,54 @@ export default function PageSignup() {
   };
 
   const goStep2 = () => { const e=validateStep1(); if(Object.keys(e).length>0){setErrors(e);return;} setErrors({}); setStep(2); window.scrollTo(0,0); };
-  const submit  = () => { const e=validateStep2(); if(Object.keys(e).length>0){setErrors(e);return;} setErrors({}); setStep(3); window.scrollTo(0,0); };
-  const reset   = () => { setMember(INIT_MEMBER); setBank(INIT_BANK); setSig1(null); setSig2(null); setStep(1); };
 
-  // 완료 화면
+  const handleSubmit = async () => {
+    const e = validateStep2();
+    if (Object.keys(e).length > 0) { setErrors(e); return; }
+
+    setErrors({});
+    setSubmitError("");
+    setSubmitting(true);
+    try {
+      await submitSignupApplication({ member, bank, sig1, sig2 });
+      setStep(3);
+      window.scrollTo(0, 0);
+    } catch (err) {
+      setSubmitError(err.message || "제출에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const reset = () => {
+    setMember(INIT_MEMBER);
+    setBank(INIT_BANK);
+    setSig1(null);
+    setSig2(null);
+    setSubmitError("");
+    setStep(1);
+  };
+
   if (step === 3) return (
-    <>
-      {showPrint && <PrintDocument member={member} bank={bank} sig1={sig1} sig2={sig2} onClose={() => setShowPrint(false)} />}
-      <section className="section">
-        <div className="container">
-          <div className="form-wrap" style={{ textAlign:"center" }}>
-            <div style={{ fontSize:56, marginBottom:16 }}>🎉</div>
-            <h3 style={{ fontSize:22, fontWeight:700, color:"var(--text)", marginBottom:8, fontFamily:"Noto Serif KR, serif" }}>
-              가입 신청이 완료되었습니다!
-            </h3>
-            <p style={{ color:"var(--text-soft)", marginBottom:6, fontSize:14 }}>
-              <strong>{member.name}</strong>님, 신청해주셔서 감사합니다.
-            </p>
-            <p style={{ color:"var(--text-soft)", marginBottom:32, fontSize:13, lineHeight:1.9 }}>
-              소속 지역 직장협의회에서 검토 후 연락드리겠습니다.
-            </p>
-
-            {/* 인쇄 버튼 */}
-            <div style={{ background:"var(--bg-2)", border:"1px solid var(--border)", borderRadius:12, padding:"20px 24px", marginBottom:24 }}>
-              <p style={{ fontSize:13, color:"var(--text-soft)", marginBottom:14, fontWeight:600 }}>
-                🖨️ 관리자 제출용 서류를 인쇄하세요
-              </p>
-              <button className="btn btn-primary" style={{ width:"100%" }} onClick={() => setShowPrint(true)}>
-                입회원서 + 원천징수동의서 인쇄
-              </button>
-            </div>
-
-            <button className="btn btn-outline" style={{ width:"100%" }} onClick={reset}>새로 신청하기</button>
-          </div>
+    <section className="section">
+      <div className="container">
+        <div className="form-wrap" style={{ textAlign:"center" }}>
+          <div style={{ fontSize:56, marginBottom:16 }}>✅</div>
+          <h3 style={{ fontSize:22, fontWeight:700, color:"var(--text)", marginBottom:16, fontFamily:"Noto Serif KR, serif" }}>
+            제출이 완료되었습니다.
+          </h3>
+          <p style={{ color:"var(--text)", marginBottom:12, fontSize:15, lineHeight:1.9, fontWeight:600 }}>
+            담당자(소속지청 의장)에게 연락주시면 바로 처리해드리겠습니다.
+          </p>
+          <p style={{ color:"var(--text-soft)", marginBottom:32, fontSize:14, lineHeight:1.9 }}>
+            <strong>{member.name}</strong>님, 가입 신청해 주셔서 감사합니다.
+          </p>
+          <button type="button" className="btn btn-outline" style={{ width:"100%" }} onClick={reset}>새로 신청하기</button>
         </div>
-      </section>
-    </>
+      </div>
+    </section>
   );
 
-  // 스텝 색상
   const stepColor = (i) => step > i+1 ? "var(--accent)" : step === i+1 ? "var(--primary)" : "var(--border)";
   const stepTxtColor = (i) => step >= i+1 ? "white" : "var(--text-light)";
 
@@ -309,9 +161,13 @@ export default function PageSignup() {
 
       <section className="section">
         <div className="container">
+          {!isSignupApiConfigured() && (
+            <div className="survey-setup-notice" style={{ maxWidth: 640, margin: "0 auto 20px" }}>
+              ℹ️ Google Apps Script 연동 전에는 이 브라우저에만 신청이 저장됩니다(테스트 모드).
+            </div>
+          )}
           <div className="form-wrap" style={{ maxWidth:640 }}>
 
-            {/* STEP 1 */}
             {step === 1 && <>
               <h2 className="form-title">📋 입회원서</h2>
               <p className="form-sub">고용노동부공무원직장협의회 가입 신청서입니다.</p>
@@ -357,10 +213,9 @@ export default function PageSignup() {
                 <label htmlFor="agree1">[필수] 개인정보 수집·이용에 동의합니다. 수집항목: 성명, 생년월일, 연락처, 소속 / 이용목적: 가입 심사 및 회원 관리 / 보유기간: 탈퇴 후 1년</label>
               </div>
               <ErrMsg field="agree" />
-              <button className="btn btn-primary btn-full" onClick={goStep2}>다음: 자동이체 신청서 작성 →</button>
+              <button type="button" className="btn btn-primary btn-full" onClick={goStep2}>다음: 자동이체 신청서 작성 →</button>
             </>}
 
-            {/* STEP 2 */}
             {step === 2 && <>
               <h2 className="form-title">🏦 자동이체 신청서</h2>
               <p className="form-sub">회비 자동이체 정보를 입력해주세요.</p>
@@ -427,9 +282,12 @@ export default function PageSignup() {
                 <SignaturePad label="신청인 서명 *" onChange={setSig2} />
                 <ErrMsg field="sig2" />
               </div>
+              {submitError && <p className="survey-error">{submitError}</p>}
               <div style={{ display:"flex", gap:12 }}>
-                <button className="btn btn-outline" style={{ flex:1 }} onClick={() => { setStep(1); window.scrollTo(0,0); }}>← 이전</button>
-                <button className="btn btn-primary" style={{ flex:2 }} onClick={submit}>가입 신청 완료 →</button>
+                <button type="button" className="btn btn-outline" style={{ flex:1 }} onClick={() => { setStep(1); window.scrollTo(0,0); }}>← 이전</button>
+                <button type="button" className="btn btn-primary" style={{ flex:2 }} onClick={handleSubmit} disabled={submitting}>
+                  {submitting ? "제출 중..." : "가입 신청 제출 →"}
+                </button>
               </div>
             </>}
 
