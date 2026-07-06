@@ -34,7 +34,6 @@ jobs:
           VITE_SURVEY_SUBMIT_URL: ${{ secrets.VITE_SURVEY_SUBMIT_URL }}
           VITE_NOTICES_API_URL: ${{ secrets.VITE_NOTICES_API_URL }}
           VITE_NOTICES_ADMIN_TOKEN: ${{ secrets.VITE_NOTICES_ADMIN_TOKEN }}
-          VITE_MEMBERS_API_URL: ${{ secrets.VITE_MEMBERS_API_URL }}
           VITE_SIGNUP_API_URL: ${{ secrets.VITE_SIGNUP_API_URL }}
           VITE_SIGNUP_ADMIN_TOKEN: ${{ secrets.VITE_SIGNUP_ADMIN_TOKEN }}
 
