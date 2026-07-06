@@ -23,7 +23,7 @@ export default function PageNotices() {
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState(null);
 
-  const [showAdmin, setShowAdmin] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(true);
   const [isAdmin, setIsAdmin] = useState(isAdminAuthenticated());
   const [adminToken, setAdminToken] = useState(getAdminToken());
   const [loginError, setLoginError] = useState("");
@@ -70,7 +70,7 @@ export default function PageNotices() {
     setAdminAuthenticated(false);
     setIsAdmin(false);
     setAdminToken("");
-    setShowAdmin(false);
+    setShowAdmin(true);
     setForm(EMPTY_FORM);
   };
 
@@ -128,10 +128,11 @@ export default function PageNotices() {
           </p>
           <div className="hero-cta-row">
             <button
+              type="button"
               className={`btn ${showAdmin ? "btn-outline" : "btn-primary"}`}
               onClick={() => setShowAdmin((v) => !v)}
             >
-              {showAdmin ? "목록 보기" : "🔐 운영진 등록"}
+              {showAdmin ? "운영진 메뉴 숨기기" : "🔐 운영진 로그인/등록"}
             </button>
           </div>
         </div>
@@ -158,7 +159,7 @@ export default function PageNotices() {
           )}
 
           {showAdmin && (
-            <div className="notices-admin-panel">
+            <div className="notices-admin-panel" id="notices-admin">
               {!isAdmin ? (
                 <form onSubmit={handleLogin} className="notices-login-form">
                   <h3>운영진 로그인</h3>
@@ -263,8 +264,13 @@ export default function PageNotices() {
             {!loading && !error && notices.length === 0 && (
               <p className="notices-empty">등록된 공지사항이 없습니다.</p>
             )}
+            {!isAdmin && !showAdmin && (
+              <p className="notices-admin-hint">
+                운영진이시라면 상단 <strong>🔐 운영진 로그인/등록</strong> 버튼을 눌러 주세요.
+              </p>
+            )}
 
-              <div className="notices-list">
+            <div className="notices-list">
                 {notices.map((notice) => {
                   const cat = getCategoryMeta(notice.category);
                   const expanded = expandedId === notice.id;

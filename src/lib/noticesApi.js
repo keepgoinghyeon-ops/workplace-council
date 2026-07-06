@@ -53,6 +53,13 @@ function normalizeNetworkError(err) {
   return err;
 }
 
+function formatAuthError(message) {
+  if (message === "unknown action") {
+    return "Apps Script에 로그인(auth) 기능이 없습니다. notices-api.gs 최신 코드를 붙여넣고 웹 앱을 재배포해 주세요.";
+  }
+  return message || "비밀번호가 올바르지 않습니다.";
+}
+
 function normalizeApiResult(result) {
   if (!result || typeof result !== "object") return { success: false, notices: [], error: "" };
   return {
@@ -151,7 +158,7 @@ export async function verifyAdminToken(token) {
         setAdminAuthenticated(true, trimmed);
         return { ok: true };
       }
-      return { ok: false, error: result.error || "비밀번호가 올바르지 않습니다." };
+      return { ok: false, error: formatAuthError(result.error) };
     } catch (err) {
       throw normalizeNetworkError(err);
     }
