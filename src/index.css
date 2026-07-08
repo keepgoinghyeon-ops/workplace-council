@@ -1069,13 +1069,20 @@ a { color: inherit; text-decoration: none; }
   width: 80px; height: 80px; min-width: 80px;
   border-radius: var(--radius); overflow: hidden;
   display: flex; align-items: center; justify-content: center;
-  font-size: 36px; position: relative;
+  font-size: 40px; position: relative;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.7);
+}
+.wt-ep-thumb > span:first-child {
+  filter: drop-shadow(0 2px 4px rgba(255, 255, 255, 0.8));
+  transform: scale(1.05);
 }
 .wt-ep-num-badge {
   position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
-  background: rgba(0,0,0,0.45); color: #fff;
+  background: rgba(255, 255, 255, 0.92); color: #3e3232;
   font-size: 10px; font-weight: 700; padding: 2px 7px;
   border-radius: 6px; white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 .wt-ep-info { flex: 1; }
 .wt-ep-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; font-family: 'Noto Serif KR', serif; }
@@ -1331,19 +1338,20 @@ a { color: inherit; text-decoration: none; }
    웹툰 탭 강조
 ─────────────────────────────────────────── */
 .nav-btn--highlight {
-  background: var(--primary) !important;
-  color: var(--white) !important;
-  font-weight: 600 !important;
+  background: linear-gradient(135deg, #7ec8e3, #a8e6cf) !important;
+  color: #1a4a3a !important;
+  font-weight: 700 !important;
   border-radius: 20px !important;
   padding: 8px 18px !important;
+  box-shadow: 0 2px 8px rgba(126, 200, 227, 0.35);
 }
 .nav-btn--highlight:hover {
-  background: var(--primary-d) !important;
-  color: var(--white) !important;
+  background: linear-gradient(135deg, #5eb8d9, #8fd9b8) !important;
+  color: #1a4a3a !important;
 }
 .nav-btn--highlight.active {
-  background: var(--primary-d) !important;
-  color: var(--white) !important;
+  background: linear-gradient(135deg, #4aa8cc, #7ecfa0) !important;
+  color: #fff !important;
 }
 
 /* ───────────────────────────────────────────

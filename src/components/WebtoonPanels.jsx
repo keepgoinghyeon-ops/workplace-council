@@ -28,55 +28,63 @@ function ComicSticker({ emoji, style }) {
 }
 
 /* ── 캐릭터 SVG (웹툰 스타일) ── */
-function Face({ cx, cy, mood = "neutral", hair = "short", gender = "m" }) {
+function WebtoonEye({ cx, cy, mood, iris = "#3e3232" }) {
+  if (mood === "happy") {
+    return (
+      <g>
+        <ellipse cx={cx} cy={cy} rx="10" ry="11" fill="#fff" stroke="#1a1a1a" strokeWidth="2" />
+        <circle cx={cx} cy={cy + 2} r="5" fill={iris} />
+        <circle cx={cx + 2.5} cy={cy - 1} r="2" fill="#fff" />
+        <circle cx={cx - 2} cy={cy + 4} r="1.2" fill="#fff" opacity="0.7" />
+        <path d={`M${cx - 12} ${cy - 14} Q${cx} ${cy - 20} ${cx + 12} ${cy - 14}`} stroke="#3e3232" strokeWidth="2" fill="none" strokeLinecap="round" />
+      </g>
+    );
+  }
+  if (mood === "tired") {
+    return (
+      <g>
+        <ellipse cx={cx} cy={cy} rx="10" ry="9" fill="#fff" stroke="#1a1a1a" strokeWidth="2" />
+        <path d={`M${cx - 10} ${cy - 5} Q${cx} ${cy - 10} ${cx + 10} ${cy - 5}`} stroke="#1a1a1a" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+        <circle cx={cx} cy={cy + 2} r="3.5" fill={iris} opacity="0.85" />
+        <circle cx={cx + 2} cy={cy} r="1.2" fill="#fff" />
+      </g>
+    );
+  }
+  if (mood === "shocked") {
+    return (
+      <g>
+        <ellipse cx={cx} cy={cy} rx="11" ry="13" fill="#fff" stroke="#1a1a1a" strokeWidth="2" />
+        <circle cx={cx} cy={cy + 2} r="5" fill={iris} />
+        <circle cx={cx + 2.5} cy={cy - 1} r="2.2" fill="#fff" />
+        <circle cx={cx - 2} cy={cy + 5} r="1" fill="#fff" opacity="0.6" />
+      </g>
+    );
+  }
+  if (mood === "love") {
+    return (
+      <g>
+        <ellipse cx={cx} cy={cy} rx="10" ry="12" fill="#fff" stroke="#1a1a1a" strokeWidth="2" />
+        <circle cx={cx} cy={cy + 2} r="4.5" fill="#6b3fa0" />
+        <circle cx={cx + 2} cy={cy - 1} r="2" fill="#fff" />
+        <text x={cx - 5} y={cy - 16} fontSize="10">✨</text>
+      </g>
+    );
+  }
+  return (
+    <g>
+      <ellipse cx={cx} cy={cy} rx="10" ry="12" fill="#fff" stroke="#1a1a1a" strokeWidth="2" />
+      <circle cx={cx} cy={cy + 2} r="4.5" fill={iris} />
+      <circle cx={cx + 2.5} cy={cy - 1} r="2" fill="#fff" />
+      <circle cx={cx - 2} cy={cy + 4} r="1.2" fill="#fff" opacity="0.6" />
+    </g>
+  );
+}
+
+function Face({ cx, cy, mood = "neutral", gender = "m" }) {
   const eyeL = cx - 14;
   const eyeR = cx + 14;
   const eyeY = cy - 2;
-
-  const eyes = {
-    tired: (
-      <>
-        <path d={`M${eyeL - 8} ${eyeY} Q${eyeL} ${eyeY + 5} ${eyeL + 8} ${eyeY}`} stroke="#1a1a1a" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-        <path d={`M${eyeR - 8} ${eyeY} Q${eyeR} ${eyeY + 5} ${eyeR + 8} ${eyeY}`} stroke="#1a1a1a" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-      </>
-    ),
-    happy: (
-      <>
-        <path d={`M${eyeL - 7} ${eyeY + 2} Q${eyeL} ${eyeY - 6} ${eyeL + 7} ${eyeY + 2}`} stroke="#1a1a1a" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-        <path d={`M${eyeR - 7} ${eyeY + 2} Q${eyeR} ${eyeY - 6} ${eyeR + 7} ${eyeY + 2}`} stroke="#1a1a1a" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-      </>
-    ),
-    shocked: (
-      <>
-        <ellipse cx={eyeL} cy={eyeY} rx="9" ry="11" fill="#fff" stroke="#1a1a1a" strokeWidth="2" />
-        <ellipse cx={eyeR} cy={eyeY} rx="9" ry="11" fill="#fff" stroke="#1a1a1a" strokeWidth="2" />
-        <circle cx={eyeL} cy={eyeY + 2} r="4" fill="#2d4a7a" />
-        <circle cx={eyeR} cy={eyeY + 2} r="4" fill="#2d4a7a" />
-        <circle cx={eyeL + 2} cy={eyeY} r="1.5" fill="#fff" />
-        <circle cx={eyeR + 2} cy={eyeY} r="1.5" fill="#fff" />
-      </>
-    ),
-    love: (
-      <>
-        <ellipse cx={eyeL} cy={eyeY} rx="8" ry="10" fill="#fff" stroke="#1a1a1a" strokeWidth="2" />
-        <ellipse cx={eyeR} cy={eyeY} rx="8" ry="10" fill="#fff" stroke="#1a1a1a" strokeWidth="2" />
-        <circle cx={eyeL} cy={eyeY + 1} r="3.5" fill="#4a3060" />
-        <circle cx={eyeR} cy={eyeY + 1} r="3.5" fill="#4a3060" />
-        <circle cx={eyeL + 2} cy={eyeY - 2} r="1.5" fill="#fff" />
-        <circle cx={eyeR + 2} cy={eyeY - 2} r="1.5" fill="#fff" />
-      </>
-    ),
-    neutral: (
-      <>
-        <ellipse cx={eyeL} cy={eyeY} rx="8" ry="10" fill="#fff" stroke="#1a1a1a" strokeWidth="2" />
-        <ellipse cx={eyeR} cy={eyeY} rx="8" ry="10" fill="#fff" stroke="#1a1a1a" strokeWidth="2" />
-        <circle cx={eyeL} cy={eyeY + 1} r="3.5" fill="#3e3232" />
-        <circle cx={eyeR} cy={eyeY + 1} r="3.5" fill="#3e3232" />
-        <circle cx={eyeL + 2} cy={eyeY - 2} r="1.5" fill="#fff" />
-        <circle cx={eyeR + 2} cy={eyeY - 2} r="1.5" fill="#fff" />
-      </>
-    ),
-  };
+  const iris = gender === "f" ? "#4a3060" : "#2d4a7a";
 
   const mouths = {
     tired: <path d={`M${cx - 8} ${cy + 18} Q${cx} ${cy + 14} ${cx + 8} ${cy + 18}`} stroke="#c17f5a" strokeWidth="2" fill="none" strokeLinecap="round" />,
@@ -109,7 +117,8 @@ function Face({ cx, cy, mood = "neutral", hair = "short", gender = "m" }) {
       {hairSide}
       <ellipse cx={cx} cy={cy + 8} rx="32" ry="34" fill="#fde8d8" stroke="#1a1a1a" strokeWidth="2" />
       {hairTop}
-      {eyes[mood] || eyes.neutral}
+      <WebtoonEye cx={eyeL} cy={eyeY} mood={mood} iris={iris} />
+      <WebtoonEye cx={eyeR} cy={eyeY} mood={mood} iris={iris} />
       {mouths[mood] || mouths.neutral}
       {blush}
     </g>
@@ -164,7 +173,7 @@ export function Ep1Panel1() {
       </svg>
       <ComicNarration text="시계는 밤 10시 47분… 커피만 세 번째 리필" />
       <ComicSticker emoji="☕×3" style={{ top: "42%", right: "6%" }} />
-      <ComicBubble name="박사원" text="히잉… 또 야근이야. 혼자 끙끙대기엔 이제 지쳤어. 누군가 내 말을 들어줄 곳은 없을까…?" thought style={{ top: "6%", left: "4%", maxWidth: "60%" }} />
+      <ComicBubble name="박감독관" text="히잉… 또 야근이야. 혼자 끙끙대기엔 이제 지쳤어. 누군가 내 말을 들어줄 곳은 없을까…?" thought style={{ top: "6%", left: "4%", maxWidth: "60%" }} />
       <ComicEmotion text="작은 목소리도, 혼자가 아니면 힘이 됩니다" />
     </ComicFrame>
   );
@@ -186,8 +195,8 @@ export function Ep1Panel2() {
       </svg>
       <ComicNarration text="다음 날 아침, 옆자리 선배가 몰래 다가온다" />
       <ComicSticker emoji="🤫" style={{ top: "50%", left: "8%" }} />
-      <ComicBubble name="선배 김감독관" text="박사원~ 혼자 삼키지 마! 직협에 건의하면 우리 목소리가 공식으로 올라가. 나도 예전에 이렇게 바꿨어 😊" tail="right" style={{ top: "10%", left: "4%", maxWidth: "54%" }} />
-      <ComicBubble name="박사원" text="직협…요? 그거 먹는 거 아니었어요?! (진지) 처음 들어봐요!" tail="left" style={{ top: "36%", right: "4%", maxWidth: "48%" }} />
+      <ComicBubble name="선배 김감독관" text="박감독관~ 혼자 삼키지 마! 직협에 건의하면 우리 목소리가 공식으로 올라가. 나도 예전에 이렇게 바꿨어 😊" tail="right" style={{ top: "10%", left: "4%", maxWidth: "54%" }} />
+      <ComicBubble name="박감독관" text="직협…요? 그거 먹는 거 아니었어요?! (진지) 처음 들어봐요!" tail="left" style={{ top: "36%", right: "4%", maxWidth: "48%" }} />
     </ComicFrame>
   );
 }
@@ -207,7 +216,7 @@ export function Ep1Panel3() {
         <text x="280" y="120" fontSize="48">✅</text>
       </svg>
       <ComicNarration text="손 떨리는 마음으로, 첫 건의서를 낸 날" />
-      <ComicBubble name="박사원" text="팀 전체가 힘들어요… 제 목소리가, 우리 모두의 목소리가 되길 바랍니다!" tail="bottom" style={{ top: "7%", left: "6%", maxWidth: "58%" }} />
+      <ComicBubble name="박감독관" text="팀 전체가 힘들어요… 제 목소리가, 우리 모두의 목소리가 되길 바랍니다!" tail="bottom" style={{ top: "7%", left: "6%", maxWidth: "58%" }} />
       <ComicSfx text="뾰로롱~✨" style={{ bottom: "20%", right: "6%" }} />
       <ComicEmotion text="용기 낸 한 장의 건의서가, 변화의 시작이 됩니다" />
     </ComicFrame>
@@ -229,7 +238,7 @@ export function Ep1Panel4() {
         <rect x="30" y="115" width="70" height="3" fill="#ccc" rx="1" /><rect x="30" y="123" width="80" height="3" fill="#ccc" rx="1" />
       </svg>
       <ComicNarration text="노사협의회, 직협 대표가 떨리는 목소리로 말한다" />
-      <ComicBubble name="직협 대표" text="현장에서 올라온 이 목소리, 무시할 수 없습니다. 박사원님 건의와 함께한 동료들의 사연도 모두 전달하겠습니다." tail="bottom" style={{ top: "4%", left: "50%", transform: "translateX(-50%)", maxWidth: "74%" }} />
+      <ComicBubble name="직협 대표" text="현장에서 올라온 이 목소리, 무시할 수 없습니다. 박감독관님 건의와 함께한 동료들의 사연도 모두 전달하겠습니다." tail="bottom" style={{ top: "4%", left: "50%", transform: "translateX(-50%)", maxWidth: "74%" }} />
       <ComicEmotion text="한 사람의 이야기가, 모두의 이야기가 되는 순간" />
     </ComicFrame>
   );
@@ -281,7 +290,7 @@ export function Ep1Panel6() {
         <text x="260" y="280" fontSize="28">🌅</text>
       </svg>
       <ComicNarration text="그해 첫 칼퇴근, 노을이 유난히 예쁜 날" />
-      <ComicBubble name="박사원" text="혼자 참았던 게 아니었어… 직협이 내 옆에 있었구나. 나도 이제 후배들한테 이 길 알려줄 거야!" tail="left" style={{ top: "9%", left: "5%", maxWidth: "60%" }} />
+      <ComicBubble name="박감독관" text="혼자 참았던 게 아니었어… 직협이 내 옆에 있었구나. 나도 이제 후배들한테 이 길 알려줄 거야!" tail="left" style={{ top: "9%", left: "5%", maxWidth: "60%" }} />
       <ComicSfx text="뿌듯…🌅" style={{ bottom: "28%", right: "10%", fontSize: "22px", color: "#ff8c42" }} />
       <div className="comic-end-line">✦ 1화 끝 — 작은 용기가 만든 기적 ✦</div>
     </ComicFrame>
@@ -392,12 +401,20 @@ export function Ep2Panel5() {
         <g transform="translate(130, 280)">
           <ellipse cx="0" cy="-20" rx="28" ry="26" fill="#fde8d8" stroke="#1a1a1a" strokeWidth="2" />
           <path d="M-28 -20 Q0 -55 28 -20 L28 0 Q0 10 -28 0 Z" fill="#2c1810" />
+          <ellipse cx="-9" cy="-18" rx="6" ry="7" fill="#fff" stroke="#1a1a1a" strokeWidth="1.5" />
+          <ellipse cx="9" cy="-18" rx="6" ry="7" fill="#fff" stroke="#1a1a1a" strokeWidth="1.5" />
+          <circle cx="-9" cy="-16" r="3" fill="#6b3fa0" /><circle cx="9" cy="-16" r="3" fill="#6b3fa0" />
+          <circle cx="-7" cy="-18" r="1.2" fill="#fff" /><circle cx="11" cy="-18" r="1.2" fill="#fff" />
           <path d="M-35 10 Q-20 80 0 100 Q20 80 35 10 Z" fill="#fff" stroke="#ddd" strokeWidth="2" />
           <path d="M-10 5 L0 25 L10 5" fill="#fff" stroke="#ddd" strokeWidth="1" />
         </g>
         <g transform="translate(270, 280)">
           <ellipse cx="0" cy="-20" rx="28" ry="26" fill="#fde8d8" stroke="#1a1a1a" strokeWidth="2" />
           <path d="M-28 -20 Q0 -55 28 -20 L28 0 Q0 10 -28 0 Z" fill="#1a1a2e" />
+          <ellipse cx="-9" cy="-18" rx="6" ry="7" fill="#fff" stroke="#1a1a1a" strokeWidth="1.5" />
+          <ellipse cx="9" cy="-18" rx="6" ry="7" fill="#fff" stroke="#1a1a1a" strokeWidth="1.5" />
+          <circle cx="-9" cy="-16" r="3" fill="#2d4a7a" /><circle cx="9" cy="-16" r="3" fill="#2d4a7a" />
+          <circle cx="-7" cy="-18" r="1.2" fill="#fff" /><circle cx="11" cy="-18" r="1.2" fill="#fff" />
           <path d="M-35 10 L-35 100 L35 100 L35 10 Z" fill="#1a1a2e" stroke="#1a1a1a" strokeWidth="2" />
           <rect x="-5" y="5" width="10" height="8" fill="#dc2626" rx="1" />
         </g>
@@ -423,9 +440,12 @@ export function Ep2Panel6() {
         <Character x={110} y={320} mood="happy" suit="#c17f5a" gender="f" scale={0.85} />
         <Character x={290} y={320} mood="happy" suit="#3e3232" scale={0.85} flip />
         <ellipse cx="200" cy="340" rx="35" ry="30" fill="#ffe4cc" stroke="#1a1a1a" strokeWidth="2" />
-        <ellipse cx="200" cy="318" rx="30" ry="14" fill="#f5d5b0" />
+        <ellipse cx="200" cy="318" rx="30" ry="14" fill="#f5d5b0" stroke="#1a1a1a" strokeWidth="1.5" />
+        <ellipse cx="192" cy="340" rx="6" ry="7" fill="#fff" stroke="#1a1a1a" strokeWidth="1.5" />
+        <ellipse cx="208" cy="340" rx="6" ry="7" fill="#fff" stroke="#1a1a1a" strokeWidth="1.5" />
+        <circle cx="192" cy="341" r="3" fill="#3e3232" /><circle cx="208" cy="341" r="3" fill="#3e3232" />
+        <circle cx="194" cy="339" r="1" fill="#fff" /><circle cx="210" cy="339" r="1" fill="#fff" />
         <path d="M165 350 Q170 380 200 385 Q230 380 235 350 Z" fill="#a8edea" stroke="#1a1a1a" strokeWidth="1.5" />
-        <circle cx="192" cy="342" r="3" fill="#3e3232" /><circle cx="208" cy="342" r="3" fill="#3e3232" />
         <path d="M195 352 Q200 356 205 352" stroke="#c17f5a" strokeWidth="1.5" fill="none" />
         <text x="300" y="200" fontSize="36">👶</text>
       </svg>
@@ -444,10 +464,10 @@ export const WEBTOON_EPISODES = [
     id: 1,
     title: "1화 — 목소리가 제도를 바꿨다",
     subtitle: "웃프게 시작해, 뭉클하게 끝나는 직협 이야기",
-    thumbnail: "🏛️",
-    themeColor: "#3e3232",
-    accentColor: "#c17f5a",
-    bgGradient: "linear-gradient(135deg, #3e3232 0%, #6b4c2a 100%)",
+    thumbnail: "✨",
+    themeColor: "#2d8a6e",
+    accentColor: "#5ec4a8",
+    bgGradient: "linear-gradient(135deg, #a8e6cf 0%, #7ec8e3 50%, #ffd6a5 100%)",
     panels: [
       { Panel: Ep1Panel1, tipBox: null },
       { Panel: Ep1Panel2, tipBox: null },
@@ -461,10 +481,10 @@ export const WEBTOON_EPISODES = [
     id: 2,
     title: "2화 — 직협이 내 편이 되어준 날",
     subtitle: "코믹한 하루들, 감동으로 이어지는 직협의 온기",
-    thumbnail: "💑",
-    themeColor: "#4a3060",
-    accentColor: "#7c5a9a",
-    bgGradient: "linear-gradient(135deg, #4a3060 0%, #7c5a9a 100%)",
+    thumbnail: "🌸",
+    themeColor: "#d4567a",
+    accentColor: "#ff8fab",
+    bgGradient: "linear-gradient(135deg, #ffd6e8 0%, #ffeaa7 50%, #c3f0ca 100%)",
     panels: [
       { Panel: Ep2Panel1, tipBox: null },
       {

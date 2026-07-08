@@ -16,7 +16,7 @@ const NAV_ITEMS = [
   { id: 4, label: "가입 신청" },
   { id: 9, label: "가입신청 관리" },
   { id: 7, label: "공지사항" },
-  { id: 5, label: "📖 직협 웹툰", highlight: true },
+  { id: 5, label: "✨ 직협 웹툰", highlight: true },
   { id: 6, label: "베스트, 워스트 설문" },
 ];
 
