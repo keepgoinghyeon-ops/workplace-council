@@ -36,6 +36,8 @@ jobs:
           VITE_NOTICES_ADMIN_TOKEN: ${{ secrets.VITE_NOTICES_ADMIN_TOKEN }}
           VITE_SIGNUP_API_URL: ${{ secrets.VITE_SIGNUP_API_URL }}
           VITE_SIGNUP_ADMIN_TOKEN: ${{ secrets.VITE_SIGNUP_ADMIN_TOKEN }}
+          VITE_BOARD_API_URL: ${{ secrets.VITE_BOARD_API_URL }}
+          VITE_BOARD_ADMIN_TOKEN: ${{ secrets.VITE_BOARD_ADMIN_TOKEN }}
 
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4

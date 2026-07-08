@@ -7,6 +7,7 @@ import PageWebtoon from "./pages/PageWebtoon";
 import PageSurvey from "./pages/PageSurvey";
 import PageNotices from "./pages/PageNotices";
 import PageSignupAdmin from "./pages/PageSignupAdmin";
+import PageBoard from "./pages/PageBoard";
 import "./index.css";
 
 const NAV_ITEMS = [
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { id: 4, label: "가입 신청" },
   { id: 9, label: "가입신청 관리" },
   { id: 7, label: "공지사항" },
+  { id: 10, label: "자유게시판" },
   { id: 5, label: "✨ 직협 웹툰", highlight: true },
   { id: 6, label: "베스트, 워스트 설문" },
 ];
@@ -120,6 +122,7 @@ export default function App() {
         {activePage === 5 && <PageWebtoon />}
         {activePage === 6 && <PageSurvey />}
         {activePage === 7 && <PageNotices />}
+        {activePage === 10 && <PageBoard />}
       </main>
 
       {/* ── 푸터 ── */}
