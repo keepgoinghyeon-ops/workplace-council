@@ -95,8 +95,10 @@ export default function App() {
       <header className="header">
         <div className="header-inner">
           <div className="logo" onClick={() => setActivePage(1)}>
-            <span className="logo-badge">고용노동부</span>
-            <span className="logo-title">전국 직장협의회</span>
+            <span className="logo-badge">
+              <span className="logo-badge-main">고용노동부</span>
+              <span className="logo-badge-sub">직장협의회</span>
+            </span>
           </div>
           <nav className="nav">
             {NAV_ITEMS.map((item) => (
