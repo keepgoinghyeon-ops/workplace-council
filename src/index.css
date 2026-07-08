@@ -1083,11 +1083,194 @@ a { color: inherit; text-decoration: none; }
 .wt-ep-count { font-size: 11px; color: var(--text-light); font-family: 'Noto Sans KR', sans-serif; }
 .wt-ep-arrow { font-size: 16px; color: var(--accent); }
 
-.wt-viewer { background: var(--bg); }
-.wt-viewer-inner { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; }
+.wt-viewer { background: #1a1a1a; }
+.wt-viewer-inner { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; background: #1a1a1a; }
 
-.wt-panel { background: var(--white); border-bottom: 2px solid var(--border); overflow: hidden; }
-.wt-panel--active { opacity: 1; }
+.wt-panel { background: var(--white); border-bottom: none; overflow: hidden; }
+.wt-panel--comic { background: #1a1a1a; padding: 0; position: relative; }
+.wt-panel--comic .wt-panel-num {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 5;
+  opacity: 0.85;
+}
+.wt-panel--comic .wt-tip {
+  margin: 0;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  background: #fff;
+}
+
+/* ── 웹툰 만화 패널 ── */
+.comic-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  max-height: 600px;
+  overflow: hidden;
+  border-bottom: 4px solid #0d0d0d;
+}
+.comic-bg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.comic-narration {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  padding: 7px 18px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  z-index: 4;
+  font-family: "Noto Sans KR", sans-serif;
+  letter-spacing: 0.02em;
+}
+.comic-bubble {
+  position: absolute;
+  background: #fff;
+  border: 2.5px solid #1a1a1a;
+  border-radius: 16px;
+  padding: 10px 14px 12px;
+  z-index: 3;
+  font-family: "Noto Sans KR", sans-serif;
+  box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.12);
+}
+.comic-bubble p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #1a1a1a;
+  font-weight: 500;
+  word-break: keep-all;
+}
+.comic-bubble-name {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  color: #c17f5a;
+  margin-bottom: 5px;
+  letter-spacing: 0.02em;
+}
+.comic-bubble--thought {
+  border-radius: 50%;
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.95);
+}
+.comic-bubble--bottom::after {
+  content: "";
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 10px solid transparent;
+  border-top-color: #1a1a1a;
+}
+.comic-bubble--bottom::before {
+  content: "";
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: #fff;
+  z-index: 1;
+}
+.comic-bubble--right::after {
+  content: "";
+  position: absolute;
+  bottom: 12px;
+  right: -14px;
+  border: 10px solid transparent;
+  border-left-color: #1a1a1a;
+}
+.comic-bubble--right::before {
+  content: "";
+  position: absolute;
+  bottom: 14px;
+  right: -9px;
+  border: 8px solid transparent;
+  border-left-color: #fff;
+  z-index: 1;
+}
+.comic-bubble--left::after {
+  content: "";
+  position: absolute;
+  bottom: 12px;
+  left: -14px;
+  border: 10px solid transparent;
+  border-right-color: #1a1a1a;
+}
+.comic-bubble--left::before {
+  content: "";
+  position: absolute;
+  bottom: 14px;
+  left: -9px;
+  border: 8px solid transparent;
+  border-right-color: #fff;
+  z-index: 1;
+}
+.comic-sticker {
+  position: absolute;
+  font-size: 28px;
+  z-index: 3;
+  filter: drop-shadow(1px 2px 2px rgba(0, 0, 0, 0.15));
+  animation: comic-bounce 2s ease-in-out infinite;
+}
+@keyframes comic-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.comic-emotion {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 24px);
+  max-width: 340px;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(193, 127, 90, 0.92), rgba(107, 76, 42, 0.92));
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 14px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  z-index: 4;
+  font-family: "Noto Sans KR", sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.01em;
+}
+
+.comic-sfx {
+  position: absolute;
+  font-weight: 900;
+  font-size: 26px;
+  color: #ff4757;
+  text-shadow: 2px 2px 0 #fff, -1px -1px 0 #fff;
+  z-index: 3;
+  font-family: "Noto Sans KR", sans-serif;
+  transform: rotate(-8deg);
+}
+.comic-end-line {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  z-index: 4;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
 
 .wt-panel-num {
   display: inline-block; color: #fff;
