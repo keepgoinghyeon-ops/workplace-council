@@ -752,6 +752,167 @@ a { color: inherit; text-decoration: none; }
   }
 }
 
+/* ── 공식 가입신청서 입력 폼 ── */
+.signup-official-form {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  box-shadow: var(--shadow-sm);
+}
+.signup-form-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.signup-form-attach {
+  display: block;
+  font-size: 12px;
+  color: var(--text-soft);
+  margin-bottom: 6px;
+}
+.signup-form-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin: 0;
+  font-family: "Noto Serif KR", serif;
+}
+.signup-official-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+.signup-official-table th,
+.signup-official-table td {
+  border: 1px solid var(--border-2);
+  padding: 10px 12px;
+  vertical-align: top;
+}
+.signup-official-table th {
+  background: var(--bg-2);
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  width: 18%;
+}
+.signup-inline-input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  padding: 4px 2px;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+}
+.signup-inline-input:focus {
+  border-bottom-color: var(--primary);
+}
+.signup-readonly-value {
+  font-weight: 600;
+  color: var(--text);
+}
+.signup-form-static {
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--text-soft);
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.signup-form-static p { margin: 0 0 8px; }
+.signup-form-static p:last-child { margin-bottom: 0; }
+.signup-form-date-row {
+  margin-bottom: 20px;
+}
+.signup-form-period {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+.signup-form-period-label {
+  font-weight: 700;
+  margin-right: 4px;
+}
+.signup-period-input {
+  max-width: 160px;
+}
+.signup-consent-table .signup-fixed-cell {
+  text-align: center;
+  color: var(--text);
+  font-size: 13px;
+}
+.signup-form-recipient {
+  text-align: center;
+  font-weight: 700;
+  margin: 24px 0;
+  font-size: 15px;
+}
+.signup-form-recipient-input {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin: 20px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.signup-office-input {
+  max-width: 100px;
+  text-align: center;
+}
+.signup-form-footnotes {
+  font-size: 11px;
+  color: var(--text-light);
+  line-height: 1.7;
+  margin-bottom: 24px;
+}
+.signup-form-footnotes p { margin: 0 0 4px; }
+.signup-field-error {
+  display: block;
+  color: var(--accent);
+  font-size: 11px;
+  margin-top: 4px;
+}
+.signup-sig-pad { margin-bottom: 16px; }
+.signup-sig-pad-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.signup-sig-pad-header button {
+  font-size: 12px;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.signup-sig-canvas {
+  width: 100%;
+  height: 100px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  cursor: crosshair;
+  display: block;
+  touch-action: none;
+}
+.signup-sig-hint {
+  font-size: 11px;
+  color: var(--text-light);
+  margin-top: 4px;
+}
+
 .survey-anonymous--submit {
   text-align: center;
   margin-bottom: 16px;
@@ -1161,6 +1322,99 @@ a { color: inherit; text-decoration: none; }
   color: var(--text-light); font-size: 12px;
 }
 .doc-divider::before { content: "─────────── 절 취 선 ───────────"; letter-spacing: 0.1em; }
+
+/* ── 공식 서식 인쇄 레이아웃 ── */
+.doc-official { font-size: 12.5px; }
+.doc-official-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+.doc-attach-label {
+  font-size: 11px;
+  color: var(--text-soft);
+}
+.doc-official-title {
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.1em;
+  margin: 0 0 20px;
+  font-family: "Noto Serif KR", serif;
+  flex: 1;
+}
+.doc-official-table th { width: 15%; }
+.doc-official-body {
+  font-size: 12.5px;
+  line-height: 1.85;
+  margin: 16px 0;
+  color: var(--text);
+}
+.doc-official-body p { margin: 0 0 8px; }
+.doc-official-period {
+  margin: 12px 0 16px;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+}
+.doc-consent-table th,
+.doc-consent-table td {
+  text-align: center;
+  font-size: 12px;
+}
+.doc-official-sign-block {
+  margin-top: 24px;
+  text-align: right;
+}
+.doc-official-date {
+  margin-bottom: 12px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+.doc-official-sign-line {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  font-size: 13px;
+}
+.doc-official-name {
+  min-width: 60px;
+  text-align: center;
+  border-bottom: 1px solid var(--text);
+  padding-bottom: 2px;
+}
+.doc-sig-box--sm {
+  width: 80px;
+  height: 40px;
+}
+.doc-sig-box--sm img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.doc-official-sig-note {
+  font-size: 11px;
+  color: var(--text-soft);
+  margin-top: 6px;
+}
+.doc-official-recipient {
+  text-align: center;
+  font-weight: 700;
+  margin-top: 28px;
+  font-size: 14px;
+}
+.doc-official-recipient--office {
+  text-align: left;
+  margin-top: 20px;
+}
+.doc-official-footnotes {
+  margin-top: 24px;
+  font-size: 10px;
+  color: var(--text-light);
+  line-height: 1.6;
+}
+.doc-official-footnotes p { margin: 0 0 3px; }
 
 /* ───────────────────────────────────────────
    @media print — 실제 인쇄 시

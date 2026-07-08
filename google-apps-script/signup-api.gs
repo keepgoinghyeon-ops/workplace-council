@@ -9,7 +9,7 @@
  */
 
 var SIGNUP_SHEET = "가입신청";
-var HEADERS = ["ID", "제출일시", "성명", "소속", "연락처", "신청일", "데이터JSON"];
+var HEADERS = ["ID", "제출일시", "성명", "소속", "직급", "신청일", "데이터JSON"];
 
 function setupSignupSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -62,15 +62,17 @@ function getSubmissions_() {
     if (!row[0]) continue;
     var payload = {};
     try { payload = JSON.parse(row[6] || "{}"); } catch (e) { payload = {}; }
+    var app = payload.application || payload.member || {};
+    var wh = payload.withholding || payload.bank || {};
     list.push({
       id: String(row[0]),
       submittedAt: String(row[1]),
       name: String(row[2]),
       affiliation: String(row[3]),
-      phone: String(row[4]),
-      joinDate: String(row[5]),
-      member: payload.member || {},
-      bank: payload.bank || {},
+      rank: String(row[4]),
+      applicationDate: String(row[5]),
+      application: app,
+      withholding: wh,
       sig1: payload.sig1 || "",
       sig2: payload.sig2 || "",
     });
@@ -83,21 +85,21 @@ function getSubmissions_() {
 }
 
 function createSubmission_(data) {
-  var member = data.member || {};
-  var bank = data.bank || {};
+  var app = data.application || data.member || {};
+  var wh = data.withholding || data.bank || {};
 
-  if (!member.name || !String(member.name).trim()) {
-    return { success: false, error: "성명을 입력하세요." };
+  if (!app.name || !String(app.name).trim()) {
+    return { success: false, error: "이름을 입력하세요." };
   }
-  if (!member.affiliation || !String(member.affiliation).trim()) {
+  if (!app.affiliation || !String(app.affiliation).trim()) {
     return { success: false, error: "소속을 입력하세요." };
   }
 
   var id = Utilities.getUuid();
   var now = new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
   var payload = {
-    member: member,
-    bank: bank,
+    application: app,
+    withholding: wh,
     sig1: data.sig1 || "",
     sig2: data.sig2 || "",
   };
@@ -105,10 +107,10 @@ function createSubmission_(data) {
   getSignupSheet_().appendRow([
     id,
     now,
-    String(member.name).trim(),
-    String(member.affiliation).trim(),
-    String(member.phone || "").trim(),
-    String(member.joinDate || "").trim(),
+    String(app.name).trim(),
+    String(app.affiliation).trim(),
+    String(app.rank || "").trim(),
+    String(app.applicationDate || app.joinDate || "").trim(),
     JSON.stringify(payload),
   ]);
 
@@ -117,12 +119,12 @@ function createSubmission_(data) {
     submission: {
       id: id,
       submittedAt: now,
-      name: String(member.name).trim(),
-      affiliation: String(member.affiliation).trim(),
-      phone: String(member.phone || "").trim(),
-      joinDate: String(member.joinDate || "").trim(),
-      member: member,
-      bank: bank,
+      name: String(app.name).trim(),
+      affiliation: String(app.affiliation).trim(),
+      rank: String(app.rank || "").trim(),
+      applicationDate: String(app.applicationDate || app.joinDate || "").trim(),
+      application: app,
+      withholding: wh,
       sig1: data.sig1 || "",
       sig2: data.sig2 || "",
     },

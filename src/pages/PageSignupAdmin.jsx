@@ -76,8 +76,8 @@ export default function PageSignupAdmin() {
     <>
       {printTarget && (
         <SignupPrintDocument
-          member={printTarget.member}
-          bank={printTarget.bank}
+          application={printTarget.application || printTarget.member}
+          withholding={printTarget.withholding || printTarget.bank}
           sig1={printTarget.sig1}
           sig2={printTarget.sig2}
           onClose={() => setPrintTarget(null)}
@@ -88,7 +88,7 @@ export default function PageSignupAdmin() {
         <div className="hero-inner">
           <div className="hero-eyebrow">관리자</div>
           <h1 style={{ fontSize: "clamp(28px, 5vw, 42px)" }}>가입신청 관리</h1>
-          <p>제출된 입회원서·원천징수동의서를 확인하고 인쇄할 수 있습니다.</p>
+          <p>제출된 가입신청서·원천징수 동의서를 확인하고 인쇄할 수 있습니다.</p>
         </div>
       </section>
 
@@ -142,7 +142,7 @@ export default function PageSignupAdmin() {
                       <h4>{item.name}</h4>
                       <p>{item.affiliation}</p>
                       <p className="signup-admin-meta">
-                        {item.phone} · 신청일 {item.joinDate} · 제출 {item.submittedAt}
+                        {item.rank || item.application?.rank || "—"} · 신청일 {item.applicationDate || item.application?.applicationDate || item.joinDate} · 제출 {item.submittedAt}
                       </p>
                     </div>
                     <div className="signup-admin-card-actions">

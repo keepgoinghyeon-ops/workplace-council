@@ -103,8 +103,10 @@ async function apiPost(payload) {
   return normalized;
 }
 
-export async function submitSignupApplication({ member, bank, sig1, sig2 }) {
-  const payload = { action: "submit", member, bank, sig1, sig2 };
+export async function submitSignupApplication({ application, withholding, sig1, sig2, member, bank }) {
+  const app = application || member || {};
+  const wh = withholding || bank || {};
+  const payload = { action: "submit", application: app, withholding: wh, sig1, sig2 };
 
   if (API_URL) {
     const result = await apiPost(payload);
@@ -114,12 +116,12 @@ export async function submitSignupApplication({ member, bank, sig1, sig2 }) {
   const submission = {
     id: crypto.randomUUID(),
     submittedAt: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
-    name: member.name,
-    affiliation: member.affiliation,
-    phone: member.phone,
-    joinDate: member.joinDate,
-    member,
-    bank,
+    name: app.name,
+    affiliation: app.affiliation,
+    rank: app.rank,
+    applicationDate: app.applicationDate || app.joinDate,
+    application: app,
+    withholding: wh,
     sig1,
     sig2,
   };
