@@ -93,7 +93,7 @@ export default function SignupPrintDocument(props) {
                   <th>성명</th>
                   <td>{withholding.name || application.name || "—"}</td>
                   <th>생년월일</th>
-                  <td>{withholding.dob || "—"}</td>
+                  <td>{withholding.dob ? formatPeriodDate(withholding.dob) : "—"}</td>
                 </tr>
               </tbody>
             </table>

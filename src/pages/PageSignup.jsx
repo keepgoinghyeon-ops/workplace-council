@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { submitSignupApplication, isSignupApiConfigured } from "../lib/signupApi";
+import FlexibleDateInput from "../components/FlexibleDateInput";
 
 function SignaturePad({ label, onChange }) {
   const canvasRef = useRef(null);
@@ -79,7 +80,9 @@ export default function PageSignup() {
   const [submitError, setSubmitError] = useState("");
 
   const setApp = (field) => (e) => setApplication((prev) => ({ ...prev, [field]: e.target.value }));
+  const setAppDate = (field) => (iso) => setApplication((prev) => ({ ...prev, [field]: iso }));
   const setWh = (field) => (e) => setWithholding((prev) => ({ ...prev, [field]: e.target.value }));
+  const setWhDate = (field) => (iso) => setWithholding((prev) => ({ ...prev, [field]: iso }));
   const ErrMsg = ({ field }) => errors[field] ? <span className="signup-field-error">{errors[field]}</span> : null;
 
   const validateStep1 = () => {
@@ -246,8 +249,13 @@ export default function PageSignup() {
                 </div>
 
                 <div className="signup-form-date-row">
-                  <label className="form-label">신청일 <span className="req">*</span></label>
-                  <input className="form-input" type="date" value={application.applicationDate} onChange={setApp("applicationDate")} style={{ maxWidth: 200 }} />
+                  <label className="form-label" htmlFor="applicationDate">신청일 <span className="req">*</span></label>
+                  <FlexibleDateInput
+                    id="applicationDate"
+                    value={application.applicationDate}
+                    onChange={setAppDate("applicationDate")}
+                    style={{ maxWidth: 280 }}
+                  />
                   <ErrMsg field="applicationDate" />
                 </div>
 
@@ -279,7 +287,13 @@ export default function PageSignup() {
                       <td><span className="signup-readonly-value">{withholding.name}</span></td>
                       <th>생년월일</th>
                       <td>
-                        <input className="signup-inline-input" type="date" value={withholding.dob} onChange={setWh("dob")} />
+                        <FlexibleDateInput
+                          value={withholding.dob}
+                          onChange={setWhDate("dob")}
+                          className="signup-inline-input signup-date-text"
+                          inline
+                          hint=""
+                        />
                         <ErrMsg field="dob" />
                       </td>
                     </tr>
@@ -288,7 +302,13 @@ export default function PageSignup() {
 
                 <div className="signup-form-period">
                   <span className="signup-form-period-label">기간</span>
-                  <input className="signup-inline-input signup-period-input" type="date" value={withholding.periodStart} onChange={setWh("periodStart")} />
+                  <FlexibleDateInput
+                    value={withholding.periodStart}
+                    onChange={setWhDate("periodStart")}
+                    className="signup-inline-input signup-date-text signup-period-input"
+                    inline
+                    hint=""
+                  />
                   <ErrMsg field="periodStart" />
                 </div>
 
@@ -316,8 +336,13 @@ export default function PageSignup() {
                 </div>
 
                 <div className="signup-form-date-row">
-                  <label className="form-label">동의일 <span className="req">*</span></label>
-                  <input className="form-input" type="date" value={withholding.consentDate} onChange={setWh("consentDate")} style={{ maxWidth: 200 }} />
+                  <label className="form-label" htmlFor="consentDate">동의일 <span className="req">*</span></label>
+                  <FlexibleDateInput
+                    id="consentDate"
+                    value={withholding.consentDate}
+                    onChange={setWhDate("consentDate")}
+                    style={{ maxWidth: 280 }}
+                  />
                   <ErrMsg field="consentDate" />
                 </div>
 
