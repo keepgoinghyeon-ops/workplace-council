@@ -88,6 +88,9 @@ function createSubmission_(data) {
   var app = data.application || data.member || {};
   var wh = data.withholding || data.bank || {};
 
+  if (!app.name && wh.name) app.name = wh.name;
+  if (!app.affiliation && wh.affiliation) app.affiliation = wh.affiliation;
+
   if (!app.name || !String(app.name).trim()) {
     return { success: false, error: "이름을 입력하세요." };
   }

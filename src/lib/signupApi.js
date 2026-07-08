@@ -104,9 +104,25 @@ async function apiPost(payload) {
 }
 
 export async function submitSignupApplication({ application, withholding, sig1, sig2, member, bank }) {
-  const app = application || member || {};
-  const wh = withholding || bank || {};
-  const payload = { action: "submit", application: app, withholding: wh, sig1, sig2 };
+  const app = { ...(application || member || {}) };
+  const wh = { ...(withholding || bank || {}) };
+
+  if (!app.name && wh.name) app.name = wh.name;
+  if (!wh.name && app.name) wh.name = app.name;
+  if (!app.affiliation && wh.affiliation) app.affiliation = wh.affiliation;
+  if (!wh.affiliation && app.affiliation) wh.affiliation = app.affiliation;
+  if (!app.rank && wh.rank) app.rank = wh.rank;
+  if (!wh.rank && app.rank) wh.rank = app.rank;
+
+  const payload = {
+    action: "submit",
+    application: app,
+    withholding: wh,
+    member: app,
+    bank: wh,
+    sig1,
+    sig2,
+  };
 
   if (API_URL) {
     const result = await apiPost(payload);
