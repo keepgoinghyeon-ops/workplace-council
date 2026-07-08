@@ -99,7 +99,7 @@ export default function SignupPrintDocument(props) {
             </table>
 
             <p className="doc-official-period">
-              기간&nbsp;&nbsp;{formatPeriodDate(withholding.periodStart)}&nbsp;&nbsp;~&nbsp;&nbsp;{formatPeriodDate(withholding.periodEnd)}
+              기간&nbsp;&nbsp;{formatPeriodDate(withholding.periodStart)}
             </p>
 
             <table className="doc-table doc-consent-table">

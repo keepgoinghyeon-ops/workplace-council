@@ -64,7 +64,6 @@ const INIT_WITHHOLDING = {
   name: "",
   dob: "",
   periodStart: "",
-  periodEnd: "",
   consentDate: today(),
   regionalOffice: "",
 };
@@ -97,8 +96,7 @@ export default function PageSignup() {
   const validateStep2 = () => {
     const e = {};
     if (!withholding.dob) e.dob = "생년월일을 입력하세요.";
-    if (!withholding.periodStart) e.periodStart = "기간 시작일을 입력하세요.";
-    if (!withholding.periodEnd) e.periodEnd = "기간 종료일을 입력하세요.";
+    if (!withholding.periodStart) e.periodStart = "기간을 입력하세요.";
     if (!withholding.consentDate) e.consentDate = "동의일을 선택하세요.";
     if (!withholding.regionalOffice.trim()) e.regionalOffice = "지방고용노동청을 입력하세요.";
     if (!sig2) e.sig2 = "서명을 해주세요.";
@@ -291,10 +289,7 @@ export default function PageSignup() {
                 <div className="signup-form-period">
                   <span className="signup-form-period-label">기간</span>
                   <input className="signup-inline-input signup-period-input" type="date" value={withholding.periodStart} onChange={setWh("periodStart")} />
-                  <span>~</span>
-                  <input className="signup-inline-input signup-period-input" type="date" value={withholding.periodEnd} onChange={setWh("periodEnd")} />
                   <ErrMsg field="periodStart" />
-                  <ErrMsg field="periodEnd" />
                 </div>
 
                 <table className="signup-official-table signup-consent-table">
