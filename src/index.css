@@ -617,6 +617,11 @@ a { color: inherit; text-decoration: none; }
 .form-required {
   color: #dc2626;
 }
+.survey-optional {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
 .survey-form {
   background: var(--white);
   border: 1px solid var(--border);

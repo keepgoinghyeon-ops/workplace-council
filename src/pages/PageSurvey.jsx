@@ -51,15 +51,6 @@ export default function PageSurvey() {
       return;
     }
 
-    const hasBest = form.bestCriteria.length > 0 || form.bestManager.trim() || form.bestReason.trim();
-    const hasWorst = form.worstItems.length > 0 || form.worstManager.trim() || form.worstReason.trim();
-    const hasOther = form.otherOpinion.trim();
-
-    if (!hasBest && !hasWorst && !hasOther) {
-      setError("베스트·워스트 평가 또는 기타 의견 중 하나 이상 작성해 주세요.");
-      return;
-    }
-
     setSubmitting(true);
     try {
       await submitSurvey(form);
@@ -128,6 +119,9 @@ export default function PageSurvey() {
                 본 설문은 고용노동부 직원들의 관리자 역량과 리더십에 대한 의견을 수렴하여
                 베스트(Best) 사례를 공유하고, 워스트(Worst) 사례를 파악·개선하기 위한 목적으로 실시합니다.
               </p>
+              <p className="survey-instruction" style={{ marginTop: 12 }}>
+                베스트·워스트 평가는 <strong>둘 중 하나만</strong> 작성하셔도 되며, 항목별 빈칸은 비워 두셔도 제출할 수 있습니다.
+              </p>
             </div>
 
             <form onSubmit={handleSubmit} className="survey-form">
@@ -160,9 +154,9 @@ export default function PageSurvey() {
               </div>
 
               <div className="survey-section">
-                <h3>3. 베스트 관리자 평가</h3>
+                <h3>3. 베스트 관리자 평가 <span className="survey-optional">(선택)</span></h3>
                 <p className="survey-instruction">
-                  아래 항목을 기준으로 긍정적으로 평가하는 관리자를 떠올리며 해당 항목을 선택해 주세요.
+                  아래 항목을 기준으로 긍정적으로 평가하는 관리자를 떠올리며 해당 항목을 선택해 주세요. 작성하지 않아도 제출할 수 있습니다.
                 </p>
                 <div className="survey-criteria-box survey-criteria-box--best">
                   {BEST_CRITERIA.map((c) => (
@@ -200,9 +194,9 @@ export default function PageSurvey() {
               </div>
 
               <div className="survey-section">
-                <h3>4. 워스트 관리자 평가</h3>
+                <h3>4. 워스트 관리자 평가 <span className="survey-optional">(선택)</span></h3>
                 <p className="survey-instruction">
-                  아래 항목을 기준으로 개선이 필요하다고 생각하는 관리자를 떠올리며 해당 항목을 선택해 주세요.
+                  아래 항목을 기준으로 개선이 필요하다고 생각하는 관리자를 떠올리며 해당 항목을 선택해 주세요. 작성하지 않아도 제출할 수 있습니다.
                 </p>
                 <div className="survey-criteria-box survey-criteria-box--worst">
                   {WORST_CATEGORIES.map((cat) => (
@@ -243,7 +237,7 @@ export default function PageSurvey() {
               </div>
 
               <div className="survey-section">
-                <h3>5. 기타 의견</h3>
+                <h3>5. 기타 의견 <span className="survey-optional">(선택)</span></h3>
                 <p className="survey-instruction">
                   관리자 제도 개선 또는 직장협의회를 위해 바라는 점을 자유롭게 작성해 주세요.
                 </p>
