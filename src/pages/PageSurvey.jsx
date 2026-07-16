@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { BEST_CRITERIA, WORST_CATEGORIES } from "../data/surveyQuestions";
-import { isSurveySubmitConfigured, submitSurvey } from "../lib/submitSurvey";
+import { isSurveySubmitConfigured, submitSurvey } from "../lib/surveyApi";
 
 const emptyForm = () => ({
+  submitterName: "",
+  submitterPhone: "",
   bestCriteria: [],
   bestManager: "",
   bestReason: "",
@@ -40,6 +42,15 @@ export default function PageSurvey() {
     e.preventDefault();
     setError("");
 
+    if (!form.submitterName.trim()) {
+      setError("성명을 입력해 주세요.");
+      return;
+    }
+    if (!form.submitterPhone.trim()) {
+      setError("연락처를 입력해 주세요.");
+      return;
+    }
+
     const hasBest = form.bestCriteria.length > 0 || form.bestManager.trim() || form.bestReason.trim();
     const hasWorst = form.worstItems.length > 0 || form.worstManager.trim() || form.worstReason.trim();
     const hasOther = form.otherOpinion.trim();
@@ -72,11 +83,11 @@ export default function PageSurvey() {
       <>
         <section className="hero">
           <div className="hero-inner">
-            <div className="hero-eyebrow">익명 설문</div>
+            <div className="hero-eyebrow">설문</div>
             <h1>제출이 완료되었습니다</h1>
             <p>
               소중한 의견을 보내 주셔서 감사합니다.<br />
-              <strong>응답은 익명으로 처리되며, 개인 신상은 일절 공개되지 않습니다.</strong>
+              <strong>취합 관리자는 비밀을 유지하며, 설문 내용은 익명으로 처리됩니다.</strong>
             </p>
             <div className="hero-cta-row">
               <button className="btn btn-primary" onClick={handleReset}>
@@ -117,14 +128,39 @@ export default function PageSurvey() {
                 본 설문은 고용노동부 직원들의 관리자 역량과 리더십에 대한 의견을 수렴하여
                 베스트(Best) 사례를 공유하고, 워스트(Worst) 사례를 파악·개선하기 위한 목적으로 실시합니다.
               </p>
-              <p className="survey-anonymous">
-                ※ 응답은 <strong>익명</strong>으로 처리되며, 개인 신상은 일절 공개되지 않습니다.
-              </p>
             </div>
 
             <form onSubmit={handleSubmit} className="survey-form">
               <div className="survey-section">
-                <h3>2. 베스트 관리자 평가</h3>
+                <h3>2. 제출자 정보</h3>
+                <p className="survey-privacy-notice">
+                  중복 설문을 방지하기 위하여 성명, 연락처를 받고 있으며, 취합 관리자는 비밀을 유지하고 익명을 보장합니다.
+                </p>
+                <div className="form-group">
+                  <label className="form-label">성명 <span className="form-required">*</span></label>
+                  <input
+                    className="form-input"
+                    placeholder="실명을 입력해 주세요"
+                    value={form.submitterName}
+                    onChange={(e) => setForm({ ...form, submitterName: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">연락처 <span className="form-required">*</span></label>
+                  <input
+                    className="form-input"
+                    type="tel"
+                    placeholder="예) 010-1234-5678"
+                    value={form.submitterPhone}
+                    onChange={(e) => setForm({ ...form, submitterPhone: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="survey-section">
+                <h3>3. 베스트 관리자 평가</h3>
                 <p className="survey-instruction">
                   아래 항목을 기준으로 긍정적으로 평가하는 관리자를 떠올리며 해당 항목을 선택해 주세요.
                 </p>
@@ -164,7 +200,7 @@ export default function PageSurvey() {
               </div>
 
               <div className="survey-section">
-                <h3>3. 워스트 관리자 평가</h3>
+                <h3>4. 워스트 관리자 평가</h3>
                 <p className="survey-instruction">
                   아래 항목을 기준으로 개선이 필요하다고 생각하는 관리자를 떠올리며 해당 항목을 선택해 주세요.
                 </p>
@@ -207,7 +243,7 @@ export default function PageSurvey() {
               </div>
 
               <div className="survey-section">
-                <h3>4. 기타 의견</h3>
+                <h3>5. 기타 의견</h3>
                 <p className="survey-instruction">
                   관리자 제도 개선 또는 직장협의회를 위해 바라는 점을 자유롭게 작성해 주세요.
                 </p>
@@ -225,15 +261,12 @@ export default function PageSurvey() {
               {error && <p className="survey-error">{error}</p>}
 
               <div className="survey-submit-wrap">
-                <p className="survey-anonymous survey-anonymous--submit">
-                  본 설문은 익명으로 제출됩니다. 이름·연락처 등 개인정보는 수집하지 않습니다.
-                </p>
                 <button
                   type="submit"
                   className="btn btn-primary btn-full"
                   disabled={submitting || !isSurveySubmitConfigured()}
                 >
-                  {submitting ? "제출 중..." : "익명으로 제출하기"}
+                  {submitting ? "제출 중..." : "설문 제출하기"}
                 </button>
               </div>
             </form>

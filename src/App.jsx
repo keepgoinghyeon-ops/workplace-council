@@ -5,6 +5,7 @@ import PageBenefits from "./pages/PageBenefits";
 import PageSignup from "./pages/PageSignup";
 import PageWebtoon from "./pages/PageWebtoon";
 import PageSurvey from "./pages/PageSurvey";
+import PageSurveyAdmin from "./pages/PageSurveyAdmin";
 import PageNotices from "./pages/PageNotices";
 import PageSignupAdmin from "./pages/PageSignupAdmin";
 import PageBoard from "./pages/PageBoard";
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { id: 10, label: "자유게시판" },
   { id: 5, label: "✨ 직협 웹툰", highlight: true },
   { id: 6, label: "베스트, 워스트 설문" },
+  { id: 11, label: "설문 취합" },
 ];
 
 const POPUP_HIDE_KEY = "wc-popup-hide-date";
@@ -123,6 +125,7 @@ export default function App() {
         {activePage === 9 && <PageSignupAdmin />}
         {activePage === 5 && <PageWebtoon />}
         {activePage === 6 && <PageSurvey />}
+        {activePage === 11 && <PageSurveyAdmin />}
         {activePage === 7 && <PageNotices />}
         {activePage === 10 && <PageBoard />}
       </main>
