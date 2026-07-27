@@ -1,3 +1,8 @@
+async function getHtml2Pdf() {
+  const mod = await import("html2pdf.js");
+  return mod.default;
+}
+
 function formatKrDate(dateStr) {
   if (!dateStr) return "20&nbsp;&nbsp;&nbsp;&nbsp;년&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;일";
   const [y, m, d] = dateStr.split("-");
@@ -106,6 +111,83 @@ const DOC_STYLES = `
   }
 `;
 
+function resolveSignupData(props) {
+  const application = props.application || props.member || {};
+  const withholding = props.withholding || props.bank || {};
+  return { application, withholding, sig1: props.sig1, sig2: props.sig2 };
+}
+
+function getSignupPdfFilename(application, withholding) {
+  const name = application.name || withholding.name || "신청서";
+  const date = (application.applicationDate || new Date().toISOString().slice(0, 10)).replace(/-/g, "");
+  return `직협가입신청_${name}_${date}.pdf`;
+}
+
+function waitForImages(root) {
+  const images = [...root.querySelectorAll("img")];
+  if (!images.length) return Promise.resolve();
+  return Promise.all(
+    images.map(
+      (img) =>
+        new Promise((resolve) => {
+          if (img.complete) resolve();
+          else {
+            img.onload = resolve;
+            img.onerror = resolve;
+          }
+        })
+    )
+  );
+}
+
+async function renderElementToPdf(element, filename) {
+  const html2pdf = await getHtml2Pdf();
+  await html2pdf()
+    .set({
+      margin: [10, 10, 10, 10],
+      filename,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0 },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["css", "legacy"], before: ".doc-page + .doc-cut-line" },
+    })
+    .from(element)
+    .save();
+}
+
+async function renderHtmlToPdf(html, filename) {
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("aria-hidden", "true");
+  Object.assign(iframe.style, {
+    position: "fixed",
+    left: "-10000px",
+    top: "0",
+    width: "794px",
+    height: "0",
+    border: "none",
+    visibility: "hidden",
+  });
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  await new Promise((resolve) => {
+    if (doc.readyState === "complete") resolve();
+    else iframe.onload = resolve;
+  });
+  await waitForImages(doc.body);
+  await new Promise((resolve) => setTimeout(resolve, 150));
+
+  try {
+    await renderElementToPdf(doc.body, filename);
+  } finally {
+    document.body.removeChild(iframe);
+  }
+}
+
 export function buildSignupDocumentHtml({ application = {}, withholding = {}, sig1, sig2 }) {
   const app = application;
   const wh = withholding;
@@ -202,25 +284,16 @@ export function buildSignupDocumentHtml({ application = {}, withholding = {}, si
 </html>`;
 }
 
-export function downloadSignupDocument(props) {
-  const application = props.application || props.member || {};
-  const withholding = props.withholding || props.bank || {};
-  const html = buildSignupDocumentHtml({
-    application,
-    withholding,
-    sig1: props.sig1,
-    sig2: props.sig2,
-  });
+export async function downloadSignupDocument(props) {
+  const { application, withholding, sig1, sig2 } = resolveSignupData(props);
+  const html = buildSignupDocumentHtml({ application, withholding, sig1, sig2 });
+  const filename = getSignupPdfFilename(application, withholding);
+  await renderHtmlToPdf(html, filename);
+}
 
-  const name = application.name || withholding.name || "신청서";
-  const date = (application.applicationDate || new Date().toISOString().slice(0, 10)).replace(/-/g, "");
-  const filename = `직협가입신청_${name}_${date}.html`;
-
-  const blob = new Blob(["\uFEFF", html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
+export async function downloadSignupDocumentFromElement(element, props) {
+  if (!element) throw new Error("PDF로 변환할 문서 영역을 찾을 수 없습니다.");
+  const { application, withholding } = resolveSignupData(props);
+  const filename = getSignupPdfFilename(application, withholding);
+  await renderElementToPdf(element, filename);
 }

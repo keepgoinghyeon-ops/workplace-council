@@ -79,6 +79,7 @@ export default function PageSignup() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [downloading, setDownloading] = useState(false);
 
   const setApp = (field) => (e) => setApplication((prev) => ({ ...prev, [field]: e.target.value }));
   const setAppDate = (field) => (iso) => setApplication((prev) => ({ ...prev, [field]: iso }));
@@ -148,6 +149,17 @@ export default function PageSignup() {
     setStep(1);
   };
 
+  const handleDownloadPdf = async () => {
+    setDownloading(true);
+    try {
+      await downloadSignupDocument({ application, withholding, sig1, sig2 });
+    } catch (err) {
+      alert(err.message || "PDF 저장에 실패했습니다.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   if (step === 3) {
     return (
       <section className="section">
@@ -167,9 +179,10 @@ export default function PageSignup() {
               type="button"
               className="btn btn-primary"
               style={{ width: "100%", marginBottom: 12 }}
-              onClick={() => downloadSignupDocument({ application, withholding, sig1, sig2 })}
+              onClick={handleDownloadPdf}
+              disabled={downloading}
             >
-              신청서 파일 다운로드
+              {downloading ? "PDF 저장 중..." : "신청서 PDF 다운로드"}
             </button>
             <button type="button" className="btn btn-outline" style={{ width: "100%" }} onClick={reset}>새로 신청하기</button>
           </div>

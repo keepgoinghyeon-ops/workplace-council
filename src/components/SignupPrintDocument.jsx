@@ -1,4 +1,5 @@
-import { downloadSignupDocument } from "../lib/signupDocumentDownload";
+import { useRef, useState } from "react";
+import { downloadSignupDocumentFromElement } from "../lib/signupDocumentDownload";
 
 function formatKrDate(dateStr) {
   if (!dateStr) return "20&nbsp;&nbsp;&nbsp;&nbsp;년&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;일";
@@ -20,7 +21,24 @@ function resolveData(props) {
 
 export default function SignupPrintDocument(props) {
   const { application, withholding, sig1, sig2 } = resolveData(props);
-  const handleDownload = () => downloadSignupDocument({ application, withholding, sig1, sig2 });
+  const printAreaRef = useRef(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      await downloadSignupDocumentFromElement(printAreaRef.current, {
+        application,
+        withholding,
+        sig1,
+        sig2,
+      });
+    } catch (err) {
+      alert(err.message || "PDF 저장에 실패했습니다.");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <div className="print-overlay">
@@ -28,12 +46,14 @@ export default function SignupPrintDocument(props) {
         <div className="print-toolbar no-print">
           <span style={{ fontWeight: 700, fontSize: 15 }}>📄 신청서 미리보기</span>
           <div style={{ display: "flex", gap: 10 }}>
-            <button type="button" className="btn btn-primary" onClick={handleDownload}>파일 다운로드</button>
+            <button type="button" className="btn btn-primary" onClick={handleDownload} disabled={downloading}>
+              {downloading ? "PDF 저장 중..." : "PDF 다운로드"}
+            </button>
             <button type="button" className="btn btn-outline" onClick={props.onClose}>닫기</button>
           </div>
         </div>
 
-        <div className="print-area" id="print-area">
+        <div className="print-area" id="print-area" ref={printAreaRef}>
           <div className="doc-page doc-official">
             <div className="doc-official-top">
               <span className="doc-attach-label">[별지 제2호서식]</span>
