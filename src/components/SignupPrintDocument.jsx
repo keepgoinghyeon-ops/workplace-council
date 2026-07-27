@@ -3,6 +3,7 @@ import { ApplicationDocumentPage, WithholdingDocumentPage } from "./SignupDocume
 import {
   downloadSignupDocumentPdf,
   downloadSignupDocumentAsWord,
+  printSignupDocument,
 } from "../lib/signupDocumentDownload";
 
 function resolveData(props) {
@@ -17,7 +18,11 @@ export default function SignupPrintDocument(props) {
   const [pdfLoading, setPdfLoading] = useState(false);
 
   const handlePrint = () => {
-    window.print();
+    try {
+      printSignupDocument(data);
+    } catch (err) {
+      alert(err.message || "인쇄 창을 열 수 없습니다.");
+    }
   };
 
   const handlePdfDownload = async () => {

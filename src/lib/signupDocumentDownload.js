@@ -25,7 +25,7 @@ function sigImg(sig, alt) {
 
 /** A4 중앙 배치 — 인쇄·PDF 공통 */
 const DOC_STYLES = `
-  @page { size: A4 portrait; margin: 12mm; }
+  @page { size: A4 portrait; margin: 0; }
   * { box-sizing: border-box; }
   html { margin: 0; padding: 0; }
   body {
@@ -55,12 +55,14 @@ const DOC_STYLES = `
     display: flex;
     align-items: center;
     justify-content: center;
-    page-break-after: always;
-    break-after: page;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    page-break-after: avoid;
+    break-after: avoid;
   }
-  body.doc-multi .doc-sheet:last-child {
-    page-break-after: auto;
-    break-after: auto;
+  body.doc-multi .doc-sheet + .doc-sheet {
+    page-break-before: always;
+    break-before: page;
   }
   .doc-page-a4 {
     width: 186mm;
@@ -173,10 +175,22 @@ const DOC_STYLES = `
     line-height: 1.35;
   }
   @media print {
-    body.doc-multi { height: auto; }
+    @page { size: A4 portrait; margin: 0; }
+    html, body {
+      width: 210mm;
+      height: auto;
+      margin: 0;
+      padding: 0;
+    }
     body.doc-multi .doc-sheet {
-      page-break-after: always;
-      break-after: page;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+    body.doc-multi .doc-sheet + .doc-sheet {
+      page-break-before: always;
+      break-before: page;
     }
     .doc-page-a4 {
       page-break-inside: avoid;
@@ -388,17 +402,40 @@ function waitForImages(root) {
   );
 }
 
-async function renderHtmlToPdf(html, filename, { pages = 1 } = {}) {
-  const pageHeight = 1123;
-  const totalHeight = pageHeight * pages;
+const A4_PX_WIDTH = 794;
+const A4_PX_HEIGHT = 1123;
+
+const HTML2CANVAS_OPTS = {
+  scale: 2,
+  useCORS: true,
+  allowTaint: true,
+  logging: false,
+  scrollY: 0,
+  scrollX: 0,
+  width: A4_PX_WIDTH,
+  height: A4_PX_HEIGHT,
+  windowWidth: A4_PX_WIDTH,
+  windowHeight: A4_PX_HEIGHT,
+};
+
+async function captureElementCanvas(element) {
+  const html2pdf = await getHtml2Pdf();
+  return html2pdf()
+    .set({ margin: 0, html2canvas: HTML2CANVAS_OPTS })
+    .from(element)
+    .toCanvas()
+    .get("canvas");
+}
+
+async function renderHtmlToPdf(html, filename) {
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
   Object.assign(iframe.style, {
     position: "fixed",
     left: "-10000px",
     top: "0",
-    width: "794px",
-    height: `${totalHeight}px`,
+    width: `${A4_PX_WIDTH}px`,
+    height: `${A4_PX_HEIGHT * 2}px`,
     border: "none",
     visibility: "hidden",
   });
@@ -414,31 +451,33 @@ async function renderHtmlToPdf(html, filename, { pages = 1 } = {}) {
     else iframe.onload = resolve;
   });
   await waitForImages(doc.body);
-  await new Promise((resolve) => setTimeout(resolve, 350));
+  await new Promise((resolve) => setTimeout(resolve, 400));
 
   try {
     const html2pdf = await getHtml2Pdf();
-    await html2pdf()
-      .set({
+    const sheets = [...doc.body.querySelectorAll(".doc-sheet")];
+    const targets = sheets.length ? sheets : [doc.body];
+    let pdf = null;
+
+    for (let i = 0; i < targets.length; i++) {
+      const worker = html2pdf().set({
         margin: 0,
-        filename,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-          scrollY: 0,
-          width: 794,
-          height: totalHeight,
-          windowWidth: 794,
-          windowHeight: totalHeight,
-        },
+        html2canvas: HTML2CANVAS_OPTS,
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"], after: ".doc-sheet" },
-      })
-      .from(doc.body)
-      .save();
+      }).from(targets[i]);
+
+      if (i === 0) {
+        await worker.toPdf();
+        pdf = await worker.get("pdf");
+      } else {
+        const canvas = await captureElementCanvas(targets[i]);
+        pdf.addPage();
+        pdf.addImage(canvas.toDataURL("image/jpeg", 0.98), "JPEG", 0, 0, 210, 297);
+      }
+    }
+
+    pdf.save(filename);
   } finally {
     document.body.removeChild(iframe);
   }
@@ -447,7 +486,7 @@ async function renderHtmlToPdf(html, filename, { pages = 1 } = {}) {
 export async function downloadSignupDocumentPdf(props) {
   const { application, withholding } = resolveSignupData(props);
   const html = buildCombinedSignupDocumentHtml(props);
-  await renderHtmlToPdf(html, getCombinedFilename(application, withholding), { pages: 2 });
+  await renderHtmlToPdf(html, getCombinedFilename(application, withholding));
 }
 
 export function printSignupDocument(props) {
