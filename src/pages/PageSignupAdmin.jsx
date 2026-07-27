@@ -4,6 +4,8 @@ import {
   downloadApplicationDocument,
   downloadWithholdingDocument,
   downloadSignupDocument,
+  printApplicationDocument,
+  printWithholdingDocument,
 } from "../lib/signupDocumentDownload";
 import {
   fetchSignupSubmissions,
@@ -151,27 +153,11 @@ export default function PageSignupAdmin() {
                       </p>
                     </div>
                     <div className="signup-admin-card-actions">
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={() => downloadApplicationDocument(item)}
-                      >
-                        가입신청서
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={() => downloadWithholdingDocument(item)}
-                      >
-                        원천징수동의서
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-outline"
-                        onClick={() => downloadSignupDocument(item)}
-                      >
-                        전체
-                      </button>
+                      <button type="button" className="btn btn-primary" onClick={() => downloadApplicationDocument(item)}>가입신청서</button>
+                      <button type="button" className="btn btn-outline" onClick={() => { try { printApplicationDocument(item); } catch (e) { alert(e.message); } }}>가입 인쇄</button>
+                      <button type="button" className="btn btn-primary" onClick={() => downloadWithholdingDocument(item)}>원천징수</button>
+                      <button type="button" className="btn btn-outline" onClick={() => { try { printWithholdingDocument(item); } catch (e) { alert(e.message); } }}>원천 인쇄</button>
+                      <button type="button" className="btn btn-outline" onClick={() => downloadSignupDocument(item)}>전체</button>
                       <button
                         type="button"
                         className="btn btn-outline"
