@@ -1,8 +1,3 @@
-async function getHtml2Pdf() {
-  const mod = await import("html2pdf.js");
-  return mod.default;
-}
-
 function formatKrDate(dateStr) {
   if (!dateStr) return "20&nbsp;&nbsp;&nbsp;&nbsp;년&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;일";
   const [y, m, d] = dateStr.split("-");
@@ -25,89 +20,82 @@ function escapeHtml(value) {
 
 function sigImg(sig, alt) {
   if (!sig) return `<span class="sig-placeholder">(인)</span>`;
-  return `<img src="${sig}" alt="${escapeHtml(alt)}" />`;
+  return `<img src="${sig}" alt="${escapeHtml(alt)}" width="96" height="44" />`;
 }
 
 const DOC_STYLES = `
-  * { box-sizing: border-box; }
+  @page { size: A4; margin: 20mm; }
   body {
     margin: 0;
-    padding: 32px 24px;
+    padding: 24px;
     font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
-    font-size: 12.5px;
+    font-size: 12.5pt;
     color: #3e3232;
     line-height: 1.7;
-    background: #fff;
   }
   .doc-page {
     max-width: 640px;
-    margin: 0 auto 48px;
-    padding-bottom: 32px;
+    margin: 0 auto 40px;
     page-break-after: always;
   }
   .doc-page:last-child { page-break-after: auto; margin-bottom: 0; }
-  .doc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-  .doc-attach { font-size: 12px; color: #666; }
+  .doc-attach { font-size: 11pt; color: #666; }
   .doc-title {
-    font-size: 22px;
+    font-size: 18pt;
     font-weight: 800;
     text-align: center;
     letter-spacing: 0.08em;
-    margin: 0 0 20px;
+    margin: 0 0 18px;
   }
   table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 18px;
-    font-size: 13px;
+    margin-bottom: 16px;
+    font-size: 11pt;
   }
   th, td {
-    border: 1px solid #c8bdb4;
-    padding: 9px 12px;
+    border: 1px solid #999;
+    padding: 8px 10px;
     vertical-align: middle;
   }
   th {
-    background: #f5f0eb;
+    background: #f0f0f0;
     font-weight: 700;
     text-align: center;
-    white-space: nowrap;
     width: 15%;
   }
-  .doc-body { font-size: 14pt; line-height: 1.85; }
+  .doc-body { font-size: 14pt; line-height: 1.85; margin: 14px 0; }
   .doc-body p { margin: 0 0 8px; }
-  .doc-period { margin: 0 0 18px; font-size: 13px; }
-  .doc-sign-block { margin-top: 28px; text-align: right; }
-  .doc-date { margin: 0 0 16px; font-size: 13px; }
-  .doc-sign-line {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 13px;
-  }
-  .doc-name { min-width: 80px; text-align: center; font-weight: 600; }
+  .doc-period { margin: 0 0 16px; font-size: 11pt; }
+  .doc-sign-block { margin-top: 24px; text-align: right; }
+  .doc-date { margin: 0 0 14px; font-size: 11pt; }
+  .doc-sign-line { font-size: 11pt; }
+  .doc-name { font-weight: 600; }
   .sig-box {
-    width: 100px;
-    height: 48px;
-    border: 1px solid #c8bdb4;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
+    display: inline-block;
+    width: 96px;
+    height: 44px;
+    border: 1px solid #999;
+    vertical-align: middle;
+    text-align: center;
   }
-  .sig-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
-  .sig-placeholder { color: #999; font-size: 12px; }
-  .doc-recipient { margin-top: 28px; font-size: 25pt; font-weight: 700; text-align: center; }
-  .doc-recipient-office { text-align: left; margin-top: 20px; font-size: 25pt; font-weight: 700; }
-  .doc-sig-note { margin: 8px 0 0; font-size: 11px; color: #666; text-align: right; }
-  .doc-footnotes { margin-top: 24px; font-size: 11px; color: #666; line-height: 1.8; }
+  .sig-placeholder { color: #999; font-size: 10pt; line-height: 44px; }
+  .doc-recipient {
+    margin-top: 24px;
+    font-size: 25pt;
+    font-weight: 700;
+    text-align: center;
+  }
+  .doc-recipient-office { text-align: left; font-size: 25pt; font-weight: 700; }
+  .doc-sig-note { margin: 8px 0 0; font-size: 9pt; color: #666; text-align: right; }
+  .doc-footnotes { margin-top: 20px; font-size: 9pt; color: #666; line-height: 1.7; }
   .doc-footnotes p { margin: 0 0 3px; }
   .doc-cut-line {
     max-width: 640px;
-    margin: 0 auto 32px;
+    margin: 0 auto 24px;
     text-align: center;
     color: #999;
-    font-size: 12px;
-    letter-spacing: 0.1em;
+    font-size: 10pt;
   }
 `;
 
@@ -117,75 +105,20 @@ function resolveSignupData(props) {
   return { application, withholding, sig1: props.sig1, sig2: props.sig2 };
 }
 
-function getSignupPdfFilename(application, withholding) {
+function getSignupFilename(application, withholding, ext) {
   const name = application.name || withholding.name || "신청서";
   const date = (application.applicationDate || new Date().toISOString().slice(0, 10)).replace(/-/g, "");
-  return `직협가입신청_${name}_${date}.pdf`;
+  return `직협가입신청_${name}_${date}.${ext}`;
 }
 
-function waitForImages(root) {
-  const images = [...root.querySelectorAll("img")];
-  if (!images.length) return Promise.resolve();
-  return Promise.all(
-    images.map(
-      (img) =>
-        new Promise((resolve) => {
-          if (img.complete) resolve();
-          else {
-            img.onload = resolve;
-            img.onerror = resolve;
-          }
-        })
-    )
-  );
-}
-
-async function renderElementToPdf(element, filename) {
-  const html2pdf = await getHtml2Pdf();
-  await html2pdf()
-    .set({
-      margin: [10, 10, 10, 10],
-      filename,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0 },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      pagebreak: { mode: ["css", "legacy"], before: ".doc-page + .doc-cut-line" },
-    })
-    .from(element)
-    .save();
-}
-
-async function renderHtmlToPdf(html, filename) {
-  const iframe = document.createElement("iframe");
-  iframe.setAttribute("aria-hidden", "true");
-  Object.assign(iframe.style, {
-    position: "fixed",
-    left: "-10000px",
-    top: "0",
-    width: "794px",
-    height: "0",
-    border: "none",
-    visibility: "hidden",
-  });
-  document.body.appendChild(iframe);
-
-  const doc = iframe.contentDocument;
-  doc.open();
-  doc.write(html);
-  doc.close();
-
-  await new Promise((resolve) => {
-    if (doc.readyState === "complete") resolve();
-    else iframe.onload = resolve;
-  });
-  await waitForImages(doc.body);
-  await new Promise((resolve) => setTimeout(resolve, 150));
-
-  try {
-    await renderElementToPdf(doc.body, filename);
-  } finally {
-    document.body.removeChild(iframe);
-  }
+function triggerFileDownload(html, filename, mimeType) {
+  const blob = new Blob(["\uFEFF", html], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 export function buildSignupDocumentHtml({ application = {}, withholding = {}, sig1, sig2 }) {
@@ -193,18 +126,18 @@ export function buildSignupDocumentHtml({ application = {}, withholding = {}, si
   const wh = withholding;
 
   return `<!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="ProgId" content="Word.Document" />
+  <meta name="Generator" content="Microsoft Word" />
   <title>직협 가입신청서 - ${escapeHtml(app.name || wh.name || "")}</title>
+  <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->
   <style>${DOC_STYLES}</style>
 </head>
 <body>
   <div class="doc-page">
-    <div class="doc-top">
-      <span class="doc-attach">[별지 제2호서식]</span>
-    </div>
+    <p class="doc-attach">[별지 제2호서식]</p>
     <h1 class="doc-title">공무원직장협의회 가입신청서</h1>
     <table>
       <tr>
@@ -223,16 +156,15 @@ export function buildSignupDocumentHtml({ application = {}, withholding = {}, si
     </div>
     <div class="doc-sign-block">
       <p class="doc-date">${formatKrDate(app.applicationDate || app.joinDate)}</p>
-      <div class="doc-sign-line">
-        <span>신청인</span>
-        <span class="doc-name">${escapeHtml(app.name)}</span>
+      <p class="doc-sign-line">
+        신청인&nbsp;&nbsp;<span class="doc-name">${escapeHtml(app.name)}</span>&nbsp;&nbsp;
         <span class="sig-box">${sigImg(sig1, "서명")}</span>
-      </div>
+      </p>
     </div>
     <p class="doc-recipient">고용노동부공무원직장협의회 귀중</p>
   </div>
 
-  <div class="doc-cut-line">─────────── 절 취 선 ───────────</div>
+  <p class="doc-cut-line">─────────── 절 취 선 ───────────</p>
 
   <div class="doc-page">
     <h1 class="doc-title">원천징수 동의(신규)서<sup>1)</sup></h1>
@@ -264,11 +196,10 @@ export function buildSignupDocumentHtml({ application = {}, withholding = {}, si
     </div>
     <div class="doc-sign-block">
       <p class="doc-date">${formatKrDate(wh.consentDate)}</p>
-      <div class="doc-sign-line">
-        <span>신청인 성명</span>
-        <span class="doc-name">${escapeHtml(wh.name || app.name)}</span>
+      <p class="doc-sign-line">
+        신청인 성명&nbsp;&nbsp;<span class="doc-name">${escapeHtml(wh.name || app.name)}</span>&nbsp;&nbsp;
         <span class="sig-box">${sigImg(sig2, "서명")}</span>
-      </div>
+      </p>
       <p class="doc-sig-note">※ (인)은 자필 서명으로 한다.</p>
     </div>
     <p class="doc-recipient doc-recipient-office">( ${escapeHtml(wh.regionalOffice || "　　　")} )지방고용노동청 지출관 귀하</p>
@@ -284,16 +215,29 @@ export function buildSignupDocumentHtml({ application = {}, withholding = {}, si
 </html>`;
 }
 
-export async function downloadSignupDocument(props) {
+/** Word(.doc) — MS Word에서 열면 서식·글자 크기가 그대로 유지됩니다 */
+export function downloadSignupDocumentAsWord(props) {
   const { application, withholding, sig1, sig2 } = resolveSignupData(props);
   const html = buildSignupDocumentHtml({ application, withholding, sig1, sig2 });
-  const filename = getSignupPdfFilename(application, withholding);
-  await renderHtmlToPdf(html, filename);
+  triggerFileDownload(
+    html,
+    getSignupFilename(application, withholding, "doc"),
+    "application/msword"
+  );
 }
 
-export async function downloadSignupDocumentFromElement(element, props) {
-  if (!element) throw new Error("PDF로 변환할 문서 영역을 찾을 수 없습니다.");
-  const { application, withholding } = resolveSignupData(props);
-  const filename = getSignupPdfFilename(application, withholding);
-  await renderElementToPdf(element, filename);
+/** HTML — 브라우저에서 열면 서식이 그대로 보입니다. PDF 필요 시 인쇄→PDF 저장 */
+export function downloadSignupDocumentAsHtml(props) {
+  const { application, withholding, sig1, sig2 } = resolveSignupData(props);
+  const html = buildSignupDocumentHtml({ application, withholding, sig1, sig2 });
+  triggerFileDownload(
+    html,
+    getSignupFilename(application, withholding, "html"),
+    "text/html;charset=utf-8"
+  );
+}
+
+/** 기본: Word(.doc) 다운로드 */
+export function downloadSignupDocument(props) {
+  downloadSignupDocumentAsWord(props);
 }

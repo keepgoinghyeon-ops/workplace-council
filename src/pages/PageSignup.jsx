@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { submitSignupApplication, isSignupApiConfigured } from "../lib/signupApi";
-import { downloadSignupDocument } from "../lib/signupDocumentDownload";
+import { downloadSignupDocument, downloadSignupDocumentAsHtml } from "../lib/signupDocumentDownload";
 import FlexibleDateInput from "../components/FlexibleDateInput";
 
 function SignaturePad({ label, onChange }) {
@@ -79,7 +79,6 @@ export default function PageSignup() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const [downloading, setDownloading] = useState(false);
 
   const setApp = (field) => (e) => setApplication((prev) => ({ ...prev, [field]: e.target.value }));
   const setAppDate = (field) => (iso) => setApplication((prev) => ({ ...prev, [field]: iso }));
@@ -149,17 +148,6 @@ export default function PageSignup() {
     setStep(1);
   };
 
-  const handleDownloadPdf = async () => {
-    setDownloading(true);
-    try {
-      await downloadSignupDocument({ application, withholding, sig1, sig2 });
-    } catch (err) {
-      alert(err.message || "PDF 저장에 실패했습니다.");
-    } finally {
-      setDownloading(false);
-    }
-  };
-
   if (step === 3) {
     return (
       <section className="section">
@@ -172,17 +160,27 @@ export default function PageSignup() {
             <p style={{ color: "var(--text)", marginBottom: 12, fontSize: 15, lineHeight: 1.9, fontWeight: 600 }}>
               담당자(소속지청 의장)에게 연락주시면 바로 처리해드리겠습니다.
             </p>
-            <p style={{ color: "var(--text-soft)", marginBottom: 24, fontSize: 14, lineHeight: 1.9 }}>
+            <p style={{ color: "var(--text-soft)", marginBottom: 12, fontSize: 14, lineHeight: 1.9 }}>
               <strong>{application.name}</strong>님, 가입 신청해 주셔서 감사합니다.
+            </p>
+            <p style={{ color: "var(--text-light)", marginBottom: 20, fontSize: 13, lineHeight: 1.7 }}>
+              신청서는 Word(.doc) 또는 HTML 파일로 저장할 수 있습니다. 서식이 그대로 유지됩니다.
             </p>
             <button
               type="button"
               className="btn btn-primary"
-              style={{ width: "100%", marginBottom: 12 }}
-              onClick={handleDownloadPdf}
-              disabled={downloading}
+              style={{ width: "100%", marginBottom: 10 }}
+              onClick={() => downloadSignupDocument({ application, withholding, sig1, sig2 })}
             >
-              {downloading ? "PDF 저장 중..." : "신청서 PDF 다운로드"}
+              Word 파일 다운로드 (.doc)
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ width: "100%", marginBottom: 12 }}
+              onClick={() => downloadSignupDocumentAsHtml({ application, withholding, sig1, sig2 })}
+            >
+              HTML 파일 다운로드
             </button>
             <button type="button" className="btn btn-outline" style={{ width: "100%" }} onClick={reset}>새로 신청하기</button>
           </div>
