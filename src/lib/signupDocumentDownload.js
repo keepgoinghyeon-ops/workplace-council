@@ -317,7 +317,7 @@ function withholdingPageInner({ application = {}, withholding = {}, sig2 }) {
       </p>
       <p class="doc-sig-note">※ (인)은 자필 서명으로 한다.</p>
     </div>
-    <p class="doc-recipient-office">( ${escapeHtml(wh.regionalOffice || "　　　")} )지방고용노동청 지출관 귀하</p>
+    <p class="doc-recipient-main">( ${escapeHtml(wh.regionalOffice || "　　　")} )지방고용노동청 지출관 귀하</p>
   </div>`;
 }
 

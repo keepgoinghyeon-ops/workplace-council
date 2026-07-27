@@ -102,7 +102,7 @@ export function WithholdingDocumentPage({ application, withholding, sig2 }) {
         </p>
         <p className="doc-sig-note">※ (인)은 자필 서명으로 한다.</p>
       </div>
-      <p className="doc-recipient-office">
+      <p className="doc-recipient-main">
         ( {wh.regionalOffice || "　　　"} )지방고용노동청 지출관 귀하
       </p>
     </div>
