@@ -217,6 +217,99 @@ function openPrintWindow(html) {
   }
 }
 
+async function getHtml2Pdf() {
+  const mod = await import("html2pdf.js");
+  return mod.default;
+}
+
+function waitForImages(root) {
+  const images = [...root.querySelectorAll("img")];
+  if (!images.length) return Promise.resolve();
+  return Promise.all(
+    images.map(
+      (img) =>
+        new Promise((resolve) => {
+          if (img.complete && img.naturalWidth > 0) resolve();
+          else {
+            img.onload = resolve;
+            img.onerror = resolve;
+            setTimeout(resolve, 800);
+          }
+        })
+    )
+  );
+}
+
+async function renderHtmlToPdf(html, filename) {
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("aria-hidden", "true");
+  Object.assign(iframe.style, {
+    position: "fixed",
+    left: "-10000px",
+    top: "0",
+    width: "794px",
+    height: "1123px",
+    border: "none",
+    visibility: "hidden",
+  });
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  await new Promise((resolve) => {
+    if (doc.readyState === "complete") resolve();
+    else iframe.onload = resolve;
+  });
+  await waitForImages(doc.body);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  try {
+    const html2pdf = await getHtml2Pdf();
+    const target = doc.body.querySelector(".doc-sheet") || doc.body;
+    await html2pdf()
+      .set({
+        margin: [8, 8, 8, 8],
+        filename,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          scrollY: 0,
+          windowWidth: 794,
+        },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["avoid-all"] },
+      })
+      .from(target)
+      .save();
+  } finally {
+    document.body.removeChild(iframe);
+  }
+}
+
+export async function downloadApplicationDocumentPdf(props) {
+  const { application, withholding, sig1 } = resolveSignupData(props);
+  const html = buildApplicationDocumentHtml({ application, sig1 });
+  await renderHtmlToPdf(html, getApplicationFilename(application, withholding, "pdf"));
+}
+
+export async function downloadWithholdingDocumentPdf(props) {
+  const { application, withholding, sig2 } = resolveSignupData(props);
+  const html = buildWithholdingDocumentHtml({ application, withholding, sig2 });
+  await renderHtmlToPdf(html, getWithholdingFilename(application, withholding, "pdf"));
+}
+
+export async function downloadSignupDocumentPdf(props) {
+  await downloadApplicationDocumentPdf(props);
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  await downloadWithholdingDocumentPdf(props);
+}
+
 export function downloadApplicationDocument(props, format = "doc") {
   const { application, withholding, sig1 } = resolveSignupData(props);
   const html = buildApplicationDocumentHtml({ application, sig1 });
@@ -242,12 +335,12 @@ export function printWithholdingDocument(props) {
 }
 
 export function downloadSignupDocument(props) {
-  downloadApplicationDocument(props, "doc");
-  setTimeout(() => downloadWithholdingDocument(props, "doc"), 400);
+  return downloadSignupDocumentPdf(props);
 }
 
 export function downloadSignupDocumentAsWord(props) {
-  downloadSignupDocument(props);
+  downloadApplicationDocument(props, "doc");
+  setTimeout(() => downloadWithholdingDocument(props, "doc"), 400);
 }
 
 export function downloadSignupDocumentAsHtml(props) {

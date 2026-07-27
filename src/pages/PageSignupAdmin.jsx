@@ -3,7 +3,9 @@ import SignupPrintDocument from "../components/SignupPrintDocument";
 import {
   downloadApplicationDocument,
   downloadWithholdingDocument,
-  downloadSignupDocument,
+  downloadApplicationDocumentPdf,
+  downloadWithholdingDocumentPdf,
+  downloadSignupDocumentPdf,
   printApplicationDocument,
   printWithholdingDocument,
 } from "../lib/signupDocumentDownload";
@@ -27,6 +29,18 @@ export default function PageSignupAdmin() {
   const [loginError, setLoginError] = useState("");
 
   const [printTarget, setPrintTarget] = useState(null);
+  const [pdfLoading, setPdfLoading] = useState("");
+
+  const runPdf = async (key, fn) => {
+    setPdfLoading(key);
+    try {
+      await fn();
+    } catch (err) {
+      alert(err.message || "PDF 저장에 실패했습니다.");
+    } finally {
+      setPdfLoading("");
+    }
+  };
 
   const loadSubmissions = useCallback(async () => {
     if (!isAdmin) return;
@@ -95,7 +109,7 @@ export default function PageSignupAdmin() {
         <div className="hero-inner">
           <div className="hero-eyebrow">관리자</div>
           <h1 style={{ fontSize: "clamp(28px, 5vw, 42px)" }}>가입신청 관리</h1>
-          <p>제출된 가입신청서·원천징수 동의서를 각각 1페이지 Word 파일로 내려받을 수 있습니다.</p>
+          <p>제출된 가입신청서·원천징수 동의서를 PDF(서명 포함)로 각각 내려받을 수 있습니다.</p>
         </div>
       </section>
 
@@ -153,11 +167,14 @@ export default function PageSignupAdmin() {
                       </p>
                     </div>
                     <div className="signup-admin-card-actions">
-                      <button type="button" className="btn btn-primary" onClick={() => downloadApplicationDocument(item)}>가입신청서</button>
+                      <button type="button" className="btn btn-primary" disabled={Boolean(pdfLoading)} onClick={() => runPdf(`${item.id}-app`, () => downloadApplicationDocumentPdf(item))}>
+                        {pdfLoading === `${item.id}-app` ? "저장 중..." : "가입 PDF"}
+                      </button>
+                      <button type="button" className="btn btn-primary" disabled={Boolean(pdfLoading)} onClick={() => runPdf(`${item.id}-wh`, () => downloadWithholdingDocumentPdf(item))}>
+                        {pdfLoading === `${item.id}-wh` ? "저장 중..." : "원천 PDF"}
+                      </button>
                       <button type="button" className="btn btn-outline" onClick={() => { try { printApplicationDocument(item); } catch (e) { alert(e.message); } }}>가입 인쇄</button>
-                      <button type="button" className="btn btn-primary" onClick={() => downloadWithholdingDocument(item)}>원천징수</button>
-                      <button type="button" className="btn btn-outline" onClick={() => { try { printWithholdingDocument(item); } catch (e) { alert(e.message); } }}>원천 인쇄</button>
-                      <button type="button" className="btn btn-outline" onClick={() => downloadSignupDocument(item)}>전체</button>
+                      <button type="button" className="btn btn-outline" onClick={() => runPdf(`${item.id}-all`, () => downloadSignupDocumentPdf(item))}>전체 PDF</button>
                       <button
                         type="button"
                         className="btn btn-outline"

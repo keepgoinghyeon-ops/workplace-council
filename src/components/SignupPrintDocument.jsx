@@ -2,6 +2,8 @@ import { useState } from "react";
 import {
   downloadApplicationDocument,
   downloadWithholdingDocument,
+  downloadApplicationDocumentPdf,
+  downloadWithholdingDocumentPdf,
   printApplicationDocument,
   printWithholdingDocument,
 } from "../lib/signupDocumentDownload";
@@ -28,6 +30,7 @@ export default function SignupPrintDocument(props) {
   const { application, withholding, sig1, sig2 } = resolveData(props);
   const data = { application, withholding, sig1, sig2 };
   const [tab, setTab] = useState("application");
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const handlePrint = () => {
     try {
@@ -35,6 +38,18 @@ export default function SignupPrintDocument(props) {
       else printWithholdingDocument(data);
     } catch (err) {
       alert(err.message || "인쇄 창을 열 수 없습니다.");
+    }
+  };
+
+  const handlePdfDownload = async () => {
+    setPdfLoading(true);
+    try {
+      if (tab === "application") await downloadApplicationDocumentPdf(data);
+      else await downloadWithholdingDocumentPdf(data);
+    } catch (err) {
+      alert(err.message || "PDF 저장에 실패했습니다.");
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -63,12 +78,15 @@ export default function SignupPrintDocument(props) {
             <button type="button" className="btn btn-primary" onClick={handlePrint}>
               이 서식 인쇄 (1페이지)
             </button>
+            <button type="button" className="btn btn-outline" disabled={pdfLoading} onClick={handlePdfDownload}>
+              {pdfLoading ? "PDF 저장 중..." : "PDF 다운로드 (서명 포함)"}
+            </button>
             <button
               type="button"
               className="btn btn-outline"
               onClick={() => (tab === "application" ? downloadApplicationDocument(data) : downloadWithholdingDocument(data))}
             >
-              Word 다운로드
+              Word (서명 미포함)
             </button>
             <button type="button" className="btn btn-outline" onClick={props.onClose}>닫기</button>
           </div>
