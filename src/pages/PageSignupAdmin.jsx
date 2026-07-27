@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import SignupPrintDocument from "../components/SignupPrintDocument";
-import { downloadSignupDocument } from "../lib/signupDocumentDownload";
+import {
+  downloadApplicationDocument,
+  downloadWithholdingDocument,
+  downloadSignupDocument,
+} from "../lib/signupDocumentDownload";
 import {
   fetchSignupSubmissions,
   verifySignupAdminToken,
@@ -73,10 +77,6 @@ export default function PageSignupAdmin() {
     }
   };
 
-  const handleDownload = (item) => {
-    downloadSignupDocument(item);
-  };
-
   return (
     <>
       {printTarget && (
@@ -93,7 +93,7 @@ export default function PageSignupAdmin() {
         <div className="hero-inner">
           <div className="hero-eyebrow">관리자</div>
           <h1 style={{ fontSize: "clamp(28px, 5vw, 42px)" }}>가입신청 관리</h1>
-          <p>제출된 가입신청서·원천징수 동의서를 확인하고 Word 파일로 내려받을 수 있습니다.</p>
+          <p>제출된 가입신청서·원천징수 동의서를 각각 1페이지 Word 파일로 내려받을 수 있습니다.</p>
         </div>
       </section>
 
@@ -154,9 +154,23 @@ export default function PageSignupAdmin() {
                       <button
                         type="button"
                         className="btn btn-primary"
-                        onClick={() => handleDownload(item)}
+                        onClick={() => downloadApplicationDocument(item)}
                       >
-                        Word 다운로드
+                        가입신청서
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => downloadWithholdingDocument(item)}
+                      >
+                        원천징수동의서
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        onClick={() => downloadSignupDocument(item)}
+                      >
+                        전체
                       </button>
                       <button
                         type="button"

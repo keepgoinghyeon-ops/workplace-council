@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { submitSignupApplication, isSignupApiConfigured } from "../lib/signupApi";
-import { downloadSignupDocument, downloadSignupDocumentAsHtml } from "../lib/signupDocumentDownload";
+import {
+  downloadApplicationDocument,
+  downloadWithholdingDocument,
+  downloadSignupDocument,
+} from "../lib/signupDocumentDownload";
 import FlexibleDateInput from "../components/FlexibleDateInput";
 
 function SignaturePad({ label, onChange }) {
@@ -164,23 +168,31 @@ export default function PageSignup() {
               <strong>{application.name}</strong>님, 가입 신청해 주셔서 감사합니다.
             </p>
             <p style={{ color: "var(--text-light)", marginBottom: 20, fontSize: 13, lineHeight: 1.7 }}>
-              신청서는 Word(.doc) 또는 HTML 파일로 저장할 수 있습니다. 서식이 그대로 유지됩니다.
+              각 서식을 1페이지씩 Word(.doc) 파일로 저장할 수 있습니다. 인쇄 시 서식이 그대로 유지됩니다.
             </p>
             <button
               type="button"
               className="btn btn-primary"
-              style={{ width: "100%", marginBottom: 10 }}
-              onClick={() => downloadSignupDocument({ application, withholding, sig1, sig2 })}
+              style={{ width: "100%", marginBottom: 8 }}
+              onClick={() => downloadApplicationDocument({ application, withholding, sig1, sig2 })}
             >
-              Word 파일 다운로드 (.doc)
+              가입신청서 다운로드 (1페이지)
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ width: "100%", marginBottom: 8 }}
+              onClick={() => downloadWithholdingDocument({ application, withholding, sig1, sig2 })}
+            >
+              원천징수 동의서 다운로드 (1페이지)
             </button>
             <button
               type="button"
               className="btn btn-outline"
               style={{ width: "100%", marginBottom: 12 }}
-              onClick={() => downloadSignupDocumentAsHtml({ application, withholding, sig1, sig2 })}
+              onClick={() => downloadSignupDocument({ application, withholding, sig1, sig2 })}
             >
-              HTML 파일 다운로드
+              두 파일 모두 다운로드
             </button>
             <button type="button" className="btn btn-outline" style={{ width: "100%" }} onClick={reset}>새로 신청하기</button>
           </div>

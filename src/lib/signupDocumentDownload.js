@@ -35,10 +35,8 @@ const DOC_STYLES = `
   }
   .doc-page {
     max-width: 640px;
-    margin: 0 auto 40px;
-    page-break-after: always;
+    margin: 0 auto;
   }
-  .doc-page:last-child { page-break-after: auto; margin-bottom: 0; }
   .doc-attach { font-size: 11pt; color: #666; }
   .doc-title {
     font-size: 18pt;
@@ -90,13 +88,6 @@ const DOC_STYLES = `
   .doc-sig-note { margin: 8px 0 0; font-size: 9pt; color: #666; text-align: right; }
   .doc-footnotes { margin-top: 20px; font-size: 9pt; color: #666; line-height: 1.7; }
   .doc-footnotes p { margin: 0 0 3px; }
-  .doc-cut-line {
-    max-width: 640px;
-    margin: 0 auto 24px;
-    text-align: center;
-    color: #999;
-    font-size: 10pt;
-  }
 `;
 
 function resolveSignupData(props) {
@@ -105,10 +96,20 @@ function resolveSignupData(props) {
   return { application, withholding, sig1: props.sig1, sig2: props.sig2 };
 }
 
-function getSignupFilename(application, withholding, ext) {
-  const name = application.name || withholding.name || "신청서";
-  const date = (application.applicationDate || new Date().toISOString().slice(0, 10)).replace(/-/g, "");
-  return `직협가입신청_${name}_${date}.${ext}`;
+function getBaseName(application, withholding) {
+  return application.name || withholding.name || "신청서";
+}
+
+function getDateKey(application) {
+  return (application.applicationDate || new Date().toISOString().slice(0, 10)).replace(/-/g, "");
+}
+
+function getApplicationFilename(application, withholding, ext) {
+  return `가입신청서_${getBaseName(application, withholding)}_${getDateKey(application)}.${ext}`;
+}
+
+function getWithholdingFilename(application, withholding, ext) {
+  return `원천징수동의서_${getBaseName(application, withholding)}_${getDateKey(application)}.${ext}`;
 }
 
 function triggerFileDownload(html, filename, mimeType) {
@@ -121,21 +122,26 @@ function triggerFileDownload(html, filename, mimeType) {
   URL.revokeObjectURL(url);
 }
 
-export function buildSignupDocumentHtml({ application = {}, withholding = {}, sig1, sig2 }) {
-  const app = application;
-  const wh = withholding;
-
+function wrapDocument(title, bodyHtml) {
   return `<!DOCTYPE html>
 <html lang="ko" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
 <head>
   <meta charset="UTF-8" />
   <meta name="ProgId" content="Word.Document" />
   <meta name="Generator" content="Microsoft Word" />
-  <title>직협 가입신청서 - ${escapeHtml(app.name || wh.name || "")}</title>
+  <title>${escapeHtml(title)}</title>
   <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->
   <style>${DOC_STYLES}</style>
 </head>
 <body>
+${bodyHtml}
+</body>
+</html>`;
+}
+
+export function buildApplicationDocumentHtml({ application = {}, sig1 }) {
+  const app = application;
+  const body = `
   <div class="doc-page">
     <p class="doc-attach">[별지 제2호서식]</p>
     <h1 class="doc-title">공무원직장협의회 가입신청서</h1>
@@ -162,10 +168,14 @@ export function buildSignupDocumentHtml({ application = {}, withholding = {}, si
       </p>
     </div>
     <p class="doc-recipient">고용노동부공무원직장협의회 귀중</p>
-  </div>
+  </div>`;
+  return wrapDocument(`가입신청서 - ${app.name || ""}`, body);
+}
 
-  <p class="doc-cut-line">─────────── 절 취 선 ───────────</p>
-
+export function buildWithholdingDocumentHtml({ application = {}, withholding = {}, sig2 }) {
+  const app = application;
+  const wh = withholding;
+  const body = `
   <div class="doc-page">
     <h1 class="doc-title">원천징수 동의(신규)서<sup>1)</sup></h1>
     <table>
@@ -210,34 +220,53 @@ export function buildSignupDocumentHtml({ application = {}, withholding = {}, si
       <p>4) 기간란을 기재하지 않은 경우에는 1년간의 효력이 있는 것으로 봅니다.</p>
       <p>5) 동의(또는 변경, 철회)를 철회하고자 하는 경우에는 별도의 서식을 작성하여 제출합니다.</p>
     </div>
-  </div>
-</body>
-</html>`;
+  </div>`;
+  return wrapDocument(`원천징수 동의서 - ${wh.name || app.name || ""}`, body);
 }
 
-/** Word(.doc) — MS Word에서 열면 서식·글자 크기가 그대로 유지됩니다 */
-export function downloadSignupDocumentAsWord(props) {
+/** @deprecated 호환용 — 두 서식 HTML을 이어 붙인 버전 */
+export function buildSignupDocumentHtml(props) {
   const { application, withholding, sig1, sig2 } = resolveSignupData(props);
-  const html = buildSignupDocumentHtml({ application, withholding, sig1, sig2 });
-  triggerFileDownload(
-    html,
-    getSignupFilename(application, withholding, "doc"),
-    "application/msword"
+  const appHtml = buildApplicationDocumentHtml({ application, sig1 });
+  const whHtml = buildWithholdingDocumentHtml({ application, withholding, sig2 });
+  const appBody = appHtml.match(/<body>([\s\S]*)<\/body>/i)?.[1] || "";
+  const whBody = whHtml.match(/<body>([\s\S]*)<\/body>/i)?.[1] || "";
+  return wrapDocument(
+    `직협 가입신청 - ${application.name || ""}`,
+    `${appBody}<p style="text-align:center;color:#999;margin:24px 0;">─────────── 절 취 선 ───────────</p>${whBody}`
   );
 }
 
-/** HTML — 브라우저에서 열면 서식이 그대로 보입니다. PDF 필요 시 인쇄→PDF 저장 */
-export function downloadSignupDocumentAsHtml(props) {
-  const { application, withholding, sig1, sig2 } = resolveSignupData(props);
-  const html = buildSignupDocumentHtml({ application, withholding, sig1, sig2 });
-  triggerFileDownload(
-    html,
-    getSignupFilename(application, withholding, "html"),
-    "text/html;charset=utf-8"
-  );
+function downloadFile(html, filename, format) {
+  const mime = format === "doc" ? "application/msword" : "text/html;charset=utf-8";
+  triggerFileDownload(html, filename, mime);
 }
 
-/** 기본: Word(.doc) 다운로드 */
+export function downloadApplicationDocument(props, format = "doc") {
+  const { application, withholding, sig1 } = resolveSignupData(props);
+  const html = buildApplicationDocumentHtml({ application, sig1 });
+  const ext = format === "doc" ? "doc" : "html";
+  downloadFile(html, getApplicationFilename(application, withholding, ext), format);
+}
+
+export function downloadWithholdingDocument(props, format = "doc") {
+  const { application, withholding, sig2 } = resolveSignupData(props);
+  const html = buildWithholdingDocumentHtml({ application, withholding, sig2 });
+  const ext = format === "doc" ? "doc" : "html";
+  downloadFile(html, getWithholdingFilename(application, withholding, ext), format);
+}
+
+/** 가입신청서 + 원천징수동의서 각 1페이지씩 Word 파일 2개 다운로드 */
 export function downloadSignupDocument(props) {
-  downloadSignupDocumentAsWord(props);
+  downloadApplicationDocument(props, "doc");
+  setTimeout(() => downloadWithholdingDocument(props, "doc"), 350);
+}
+
+export function downloadSignupDocumentAsWord(props) {
+  downloadSignupDocument(props);
+}
+
+export function downloadSignupDocumentAsHtml(props) {
+  downloadApplicationDocument(props, "html");
+  setTimeout(() => downloadWithholdingDocument(props, "html"), 350);
 }

@@ -66,36 +66,54 @@ export default function App() {
   return (
     <div className="app">
 
-      {/* ── 커피캔 행사 홍보 팝업 ── */}
-      {showPopup && (
-        <div className="popup-overlay" onClick={closePopup}>
-          <div className="popup-box popup-box--promo" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="popup-close" onClick={closePopup} aria-label="닫기">✕</button>
-            <div className="promo-popup-crop">
-              <img
-                src={`${import.meta.env.BASE_URL}coffee-can-event.png`}
-                alt="커피캔 행사 - 직협이 있기에 우리가 더 빛납니다. 오늘은 커피 한잔!"
-                className="promo-popup-image"
-              />
-            </div>
-            <div className="popup-actions">
-              <button
-                type="button"
-                className="btn btn-primary promo-popup-cta"
-                onClick={() => { setActivePage(4); closePopup(); }}
-              >
-                가입 신청 바로가기 →
-              </button>
-              <div className="popup-footer-actions">
-                <button type="button" className="popup-dismiss" onClick={dismissPopupToday}>
-                  오늘 그만보기
+      {/* ── 오른쪽 롤 패널 (커피캔 행사 · 웹툰) ── */}
+      {(showPopup || (showWebtoonPopup && activePage !== 5)) && (
+        <aside className="side-roll-stack" aria-label="안내 패널">
+          {showPopup && (
+            <div className="side-roll-panel side-roll-panel--promo">
+              <div className="side-roll-panel-head">
+                <span>☕ 커피캔 행사</span>
+                <button type="button" className="side-roll-close" onClick={closePopup} aria-label="닫기">✕</button>
+              </div>
+              <div className="side-roll-panel-body side-roll-panel-body--scroll">
+                <div className="promo-popup-crop">
+                  <img
+                    src={`${import.meta.env.BASE_URL}coffee-can-event.png`}
+                    alt="커피캔 행사 - 직협이 있기에 우리가 더 빛납니다"
+                    className="promo-popup-image"
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary side-roll-cta"
+                  onClick={() => { setActivePage(4); closePopup(); }}
+                >
+                  가입 신청 →
                 </button>
-                <span className="popup-footer-divider">|</span>
-                <button type="button" className="popup-dismiss" onClick={closePopup}>닫기</button>
+                <div className="side-roll-footer">
+                  <button type="button" className="popup-dismiss" onClick={dismissPopupToday}>
+                    오늘 그만
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          )}
+
+          {showWebtoonPopup && activePage !== 5 && (
+            <div className="side-roll-panel side-roll-panel--webtoon">
+              <div className="side-roll-panel-head">
+                <span>✨ 직협 웹툰</span>
+                <button type="button" className="side-roll-close" onClick={closeWebtoonPopup} aria-label="닫기">✕</button>
+              </div>
+              <div className="side-roll-panel-body">
+                <p className="side-roll-desc">직장협의회 이야기를 만화로 만나보세요!</p>
+                <button type="button" className="side-roll-cta side-roll-cta--webtoon" onClick={goToWebtoon}>
+                  웹툰 보러가기 →
+                </button>
+              </div>
+            </div>
+          )}
+        </aside>
       )}
 
       {/* ── 헤더 ── */}
@@ -117,19 +135,6 @@ export default function App() {
 
       {/* ── 페이지 콘텐츠 ── */}
       <main className="main">
-        {showWebtoonPopup && activePage !== 5 && (
-          <div className="webtoon-nav-popup">
-            <button type="button" className="webtoon-nav-popup-close" onClick={closeWebtoonPopup} aria-label="닫기">
-              ✕
-            </button>
-            <p className="webtoon-nav-popup-eyebrow">NEW</p>
-            <p className="webtoon-nav-popup-title">✨ 직협 웹툰</p>
-            <p className="webtoon-nav-popup-desc">직장협의회 이야기를 만화로 만나보세요!</p>
-            <button type="button" className="webtoon-nav-popup-btn" onClick={goToWebtoon}>
-              웹툰 보러가기 →
-            </button>
-          </div>
-        )}
         {activePage === 1 && <PageAbout onNavigate={setActivePage} />}
         {activePage === 2 && <PageJoin />}
         {activePage === 3 && <PageBenefits onNavigate={setActivePage} />}

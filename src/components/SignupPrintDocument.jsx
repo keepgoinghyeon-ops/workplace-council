@@ -1,6 +1,7 @@
 import {
-  downloadSignupDocumentAsWord,
-  downloadSignupDocumentAsHtml,
+  downloadApplicationDocument,
+  downloadWithholdingDocument,
+  downloadSignupDocument,
 } from "../lib/signupDocumentDownload";
 
 function formatKrDate(dateStr) {
@@ -30,12 +31,15 @@ export default function SignupPrintDocument(props) {
       <div className="print-modal">
         <div className="print-toolbar no-print">
           <span style={{ fontWeight: 700, fontSize: 15 }}>📄 신청서 미리보기</span>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button type="button" className="btn btn-primary" onClick={() => downloadSignupDocumentAsWord(data)}>
-              Word 다운로드
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" className="btn btn-primary" onClick={() => downloadApplicationDocument(data)}>
+              가입신청서
             </button>
-            <button type="button" className="btn btn-outline" onClick={() => downloadSignupDocumentAsHtml(data)}>
-              HTML 다운로드
+            <button type="button" className="btn btn-primary" onClick={() => downloadWithholdingDocument(data)}>
+              원천징수동의서
+            </button>
+            <button type="button" className="btn btn-outline" onClick={() => downloadSignupDocument(data)}>
+              전체 다운로드
             </button>
             <button type="button" className="btn btn-outline" onClick={props.onClose}>닫기</button>
           </div>
