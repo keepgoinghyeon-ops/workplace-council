@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { submitSignupApplication, isSignupApiConfigured } from "../lib/signupApi";
+import { downloadSignupDocument } from "../lib/signupDocumentDownload";
 import FlexibleDateInput from "../components/FlexibleDateInput";
 
 function SignaturePad({ label, onChange }) {
@@ -159,9 +160,17 @@ export default function PageSignup() {
             <p style={{ color: "var(--text)", marginBottom: 12, fontSize: 15, lineHeight: 1.9, fontWeight: 600 }}>
               담당자(소속지청 의장)에게 연락주시면 바로 처리해드리겠습니다.
             </p>
-            <p style={{ color: "var(--text-soft)", marginBottom: 32, fontSize: 14, lineHeight: 1.9 }}>
+            <p style={{ color: "var(--text-soft)", marginBottom: 24, fontSize: 14, lineHeight: 1.9 }}>
               <strong>{application.name}</strong>님, 가입 신청해 주셔서 감사합니다.
             </p>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ width: "100%", marginBottom: 12 }}
+              onClick={() => downloadSignupDocument({ application, withholding, sig1, sig2 })}
+            >
+              신청서 파일 다운로드
+            </button>
             <button type="button" className="btn btn-outline" style={{ width: "100%" }} onClick={reset}>새로 신청하기</button>
           </div>
         </div>

@@ -9,7 +9,18 @@
  */
 
 var BOARD_SHEET = "자유게시판";
-var HEADERS = ["ID", "작성일시", "지청명", "내용"];
+var HEADERS = ["ID", "작성일시", "지청명", "내용", "비공개"];
+
+function hasPrivateColumn_(headerRow) {
+  for (var i = 0; i < headerRow.length; i++) {
+    if (String(headerRow[i]) === "비공개") return true;
+  }
+  return false;
+}
+
+function parsePrivateFlag_(value) {
+  return value === true || value === "Y" || String(value).toLowerCase() === "true" || value === "비공개";
+}
 
 function setupBoardSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -51,20 +62,26 @@ function checkAuth_(token) {
   return { ok: true };
 }
 
-function getPosts_() {
+function getPosts_(includePrivate) {
   var sheet = getBoardSheet_();
   var data = sheet.getDataRange().getValues();
   if (data.length <= 1) return [];
 
+  var withPrivateCol = hasPrivateColumn_(data[0]);
   var list = [];
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
     if (!row[0]) continue;
+
+    var isPrivate = withPrivateCol ? parsePrivateFlag_(row[4]) : false;
+    if (!includePrivate && isPrivate) continue;
+
     list.push({
       id: String(row[0]),
       createdAt: String(row[1]),
       office: String(row[2]),
       content: String(row[3]),
+      isPrivate: isPrivate,
     });
   }
 
@@ -87,12 +104,14 @@ function createPost_(data) {
 
   var id = Utilities.getUuid();
   var now = new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
+  var isPrivate = parsePrivateFlag_(data.isPrivate);
 
   getBoardSheet_().appendRow([
     id,
     now,
     String(office).trim(),
     String(content).trim(),
+    isPrivate ? "Y" : "",
   ]);
 
   return {
@@ -102,6 +121,7 @@ function createPost_(data) {
       createdAt: now,
       office: String(office).trim(),
       content: String(content).trim(),
+      isPrivate: isPrivate,
     },
   };
 }
@@ -124,7 +144,9 @@ function doGet(e) {
       return jsonResponse({ success: true, service: "board-api", status: "ok" });
     }
     if (action === "list") {
-      return jsonResponse({ success: true, posts: getPosts_() });
+      var adminToken = (e.parameter && e.parameter.adminToken) || "";
+      var includePrivate = isAuthorized_(adminToken);
+      return jsonResponse({ success: true, posts: getPosts_(includePrivate) });
     }
     if (action === "auth") {
       var auth = checkAuth_((e.parameter && e.parameter.adminToken) || "");

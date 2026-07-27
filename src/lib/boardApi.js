@@ -103,16 +103,23 @@ async function apiPost(payload) {
   return normalized;
 }
 
-export async function fetchBoardPosts() {
+export async function fetchBoardPosts(adminToken) {
+  const params = { action: "list" };
+  const token = adminToken || (isBoardAdminAuthenticated() ? getBoardAdminToken() : "");
+  if (token) params.adminToken = token;
+
   if (API_URL) {
-    const result = await apiGet({ action: "list" });
+    const result = await apiGet(params);
     return result.posts || [];
   }
-  return readLocalPosts();
+
+  const all = readLocalPosts();
+  if (token) return all;
+  return all.filter((p) => !p.isPrivate);
 }
 
-export async function submitBoardPost({ office, content }) {
-  const payload = { action: "submit", office, content };
+export async function submitBoardPost({ office, content, isPrivate = false }) {
+  const payload = { action: "submit", office, content, isPrivate: Boolean(isPrivate) };
 
   if (API_URL) {
     const result = await apiPost(payload);
@@ -124,6 +131,7 @@ export async function submitBoardPost({ office, content }) {
     createdAt: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
     office: String(office).trim(),
     content: String(content).trim(),
+    isPrivate: Boolean(isPrivate),
   };
   writeLocalPosts([post, ...readLocalPosts()]);
   return post;

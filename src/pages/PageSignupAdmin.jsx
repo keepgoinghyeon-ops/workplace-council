@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import SignupPrintDocument from "../components/SignupPrintDocument";
+import { downloadSignupDocument } from "../lib/signupDocumentDownload";
 import {
   fetchSignupSubmissions,
   verifySignupAdminToken,
@@ -88,7 +89,7 @@ export default function PageSignupAdmin() {
         <div className="hero-inner">
           <div className="hero-eyebrow">관리자</div>
           <h1 style={{ fontSize: "clamp(28px, 5vw, 42px)" }}>가입신청 관리</h1>
-          <p>제출된 가입신청서·원천징수 동의서를 확인하고 인쇄할 수 있습니다.</p>
+          <p>제출된 가입신청서·원천징수 동의서를 확인하고 파일로 내려받을 수 있습니다.</p>
         </div>
       </section>
 
@@ -106,7 +107,7 @@ export default function PageSignupAdmin() {
               <form onSubmit={handleLogin} className="notices-login-form">
                 <h3>관리자 로그인</h3>
                 <p className="survey-instruction">
-                  가입신청 목록 조회 및 인쇄는 관리자만 가능합니다.
+                  가입신청 목록 조회 및 파일 다운로드는 관리자만 가능합니다.
                 </p>
                 <div className="form-group">
                   <label className="form-label">관리자 비밀번호</label>
@@ -149,9 +150,16 @@ export default function PageSignupAdmin() {
                       <button
                         type="button"
                         className="btn btn-primary"
+                        onClick={() => downloadSignupDocument(item)}
+                      >
+                        다운로드
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
                         onClick={() => setPrintTarget(item)}
                       >
-                        인쇄
+                        미리보기
                       </button>
                       <button
                         type="button"

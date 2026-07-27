@@ -13,7 +13,10 @@ import {
 const GUIDE_TEXT =
   "자유게시판은 누구든지 자유형식에 맞게 작성할 수 있습니다. 직협에 바라는 점이나, 직협 차원에서 추진해 볼 만한 업무 제도 또는 환경 개선, 복지 제안 등을 현행문제점과 개선안으로 구성하여 작성해주시면 감사하겠습니다. 내용이 공유되는 만큼 서로를 객관적 근거없이 비방하는 말이나 비속어, 욕설 작성 시 삭제될 수 있음에 유의바랍니다.";
 
-const EMPTY_FORM = { office: "", content: "" };
+const PRIVATE_NOTICE =
+  "귀하가 작성한 글은 홈페이지내에서 비공개되나, 관리자는 확인가능하니 비속어, 근거없는 비방글은 삼가하여 주시기 바랍니다.";
+
+const EMPTY_FORM = { office: "", content: "", isPrivate: false };
 
 export default function PageBoard() {
   const [posts, setPosts] = useState([]);
@@ -30,18 +33,24 @@ export default function PageBoard() {
   const [adminToken, setAdminToken] = useState(getBoardAdminToken());
   const [loginError, setLoginError] = useState("");
 
-  const loadPosts = useCallback(async () => {
+  const loadPosts = useCallback(async (overrideAdminToken) => {
     setLoading(true);
     setError("");
     try {
-      const data = await fetchBoardPosts();
+      const token =
+        overrideAdminToken !== undefined
+          ? overrideAdminToken
+          : isAdmin
+            ? adminToken || getBoardAdminToken()
+            : "";
+      const data = await fetchBoardPosts(token || undefined);
       setPosts(data);
     } catch (err) {
       setError(err.message || "게시글을 불러올 수 없습니다.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAdmin, adminToken]);
 
   useEffect(() => {
     loadPosts();
@@ -63,9 +72,17 @@ export default function PageBoard() {
 
     setSubmitting(true);
     try {
-      await submitBoardPost({ office: form.office.trim(), content: form.content.trim() });
+      await submitBoardPost({
+        office: form.office.trim(),
+        content: form.content.trim(),
+        isPrivate: form.isPrivate,
+      });
       setForm(EMPTY_FORM);
-      setFormSuccess("게시글이 등록되었습니다. 감사합니다!");
+      setFormSuccess(
+        form.isPrivate
+          ? "비공개 게시글이 등록되었습니다. 홈페이지 목록에는 표시되지 않습니다."
+          : "게시글이 등록되었습니다. 감사합니다!"
+      );
       await loadPosts();
     } catch (err) {
       setFormError(err.message || "등록에 실패했습니다.");
@@ -81,6 +98,7 @@ export default function PageBoard() {
       const result = await verifyBoardAdminToken(adminToken);
       if (result.ok) {
         setIsAdmin(true);
+        await loadPosts(adminToken);
       } else {
         setLoginError(result.error || "비밀번호가 올바르지 않습니다.");
       }
@@ -93,6 +111,7 @@ export default function PageBoard() {
     setBoardAdminAuthenticated(false);
     setIsAdmin(false);
     setAdminToken("");
+    loadPosts("");
   };
 
   const handleDelete = async (id) => {
@@ -156,6 +175,19 @@ export default function PageBoard() {
                   rows={10}
                 />
               </div>
+              <div className="form-group board-private-group">
+                <label className="board-private-option">
+                  <input
+                    type="checkbox"
+                    checked={form.isPrivate}
+                    onChange={(e) => setForm((prev) => ({ ...prev, isPrivate: e.target.checked }))}
+                  />
+                  <span>비공개로 작성</span>
+                </label>
+                {form.isPrivate && (
+                  <p className="board-private-notice">{PRIVATE_NOTICE}</p>
+                )}
+              </div>
               {formError && <p className="survey-error">{formError}</p>}
               {formSuccess && <p className="board-success">{formSuccess}</p>}
               <button type="submit" className="btn btn-primary btn-full" disabled={submitting}>
@@ -164,7 +196,10 @@ export default function PageBoard() {
             </form>
 
             <div className="board-list-section">
-              <h3>게시글 목록 ({posts.length}건)</h3>
+              <h3>
+                게시글 목록 ({posts.length}건)
+                {isAdmin && <span className="board-admin-list-hint"> · 비공개 글 포함</span>}
+              </h3>
               {loading && <p className="notices-empty">불러오는 중...</p>}
               {error && <p className="survey-error">{error}</p>}
               {!loading && !error && posts.length === 0 && (
@@ -172,9 +207,10 @@ export default function PageBoard() {
               )}
               <div className="board-list">
                 {posts.map((post) => (
-                  <article key={post.id} className="board-card">
+                  <article key={post.id} className={`board-card ${post.isPrivate ? "board-card--private" : ""}`}>
                     <div className="board-card-header">
                       <span className="board-office-badge">{post.office}</span>
+                      {post.isPrivate && <span className="board-private-badge">비공개</span>}
                       <time className="board-date">{post.createdAt}</time>
                     </div>
                     <div className="board-card-content">{post.content}</div>
@@ -207,7 +243,7 @@ export default function PageBoard() {
                 {!isAdmin ? (
                   <form onSubmit={handleAdminLogin} className="notices-login-form">
                     <h3>관리자 로그인</h3>
-                    <p className="survey-instruction">부적절한 게시글 삭제용 관리자 메뉴입니다.</p>
+                    <p className="survey-instruction">부적절한 게시글 삭제 및 비공개 글 확인용 관리자 메뉴입니다.</p>
                     <div className="form-group">
                       <label className="form-label">관리자 비밀번호</label>
                       <input
@@ -223,7 +259,7 @@ export default function PageBoard() {
                   </form>
                 ) : (
                   <div className="signup-admin-header">
-                    <p>관리자로 로그인됨 — 부적절한 게시글을 삭제할 수 있습니다.</p>
+                    <p>관리자로 로그인됨 — 공개·비공개 게시글을 확인하고 삭제할 수 있습니다.</p>
                     <button type="button" className="popup-dismiss" onClick={handleAdminLogout}>
                       로그아웃
                     </button>
