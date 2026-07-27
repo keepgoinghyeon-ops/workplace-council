@@ -23,16 +23,11 @@ function sigImg(sig, alt) {
   return `<img src="${sig}" alt="${escapeHtml(alt)}" class="doc-sig-img" />`;
 }
 
-/** A4 1장 중앙 배치 — 인쇄·PDF 공통 */
+/** A4 중앙 배치 — 인쇄·PDF 공통 */
 const DOC_STYLES = `
   @page { size: A4 portrait; margin: 12mm; }
   * { box-sizing: border-box; }
-  html {
-    width: 210mm;
-    height: 297mm;
-    margin: 0;
-    padding: 0;
-  }
+  html { margin: 0; padding: 0; }
   body {
     margin: 0;
     padding: 0;
@@ -47,6 +42,25 @@ const DOC_STYLES = `
     background: #fff;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+  body.doc-multi {
+    display: block;
+    width: 210mm;
+    height: auto;
+    min-height: auto;
+  }
+  body.doc-multi .doc-sheet {
+    width: 210mm;
+    height: 297mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    page-break-after: always;
+    break-after: page;
+  }
+  body.doc-multi .doc-sheet:last-child {
+    page-break-after: auto;
+    break-after: auto;
   }
   .doc-page-a4 {
     width: 186mm;
@@ -91,19 +105,13 @@ const DOC_STYLES = `
     text-align: left;
     min-height: 32px;
   }
-  .doc-tbl--center th,
-  .doc-tbl--center td {
-    text-align: center;
-  }
   .doc-body-text {
     font-size: 14pt;
     line-height: 1.9;
     margin: 5mm 0 8mm;
     text-align: justify;
   }
-  .doc-body-text p {
-    margin: 0 0 6px;
-  }
+  .doc-body-text p { margin: 0 0 6px; }
   .doc-sign-area {
     margin-top: 10mm;
     text-align: right;
@@ -164,21 +172,14 @@ const DOC_STYLES = `
     letter-spacing: 0.02em;
     line-height: 1.35;
   }
-  .doc-footnotes-sm {
-    margin-top: 8mm;
-    font-size: 9pt;
-    color: #333;
-    line-height: 1.65;
-  }
-  .doc-footnotes-sm p { margin: 0 0 2px; }
   @media print {
-    html, body {
-      width: 210mm;
-      height: 297mm;
+    body.doc-multi { height: auto; }
+    body.doc-multi .doc-sheet {
+      page-break-after: always;
+      break-after: page;
     }
     .doc-page-a4 {
       page-break-inside: avoid;
-      page-break-after: avoid;
     }
   }
 `;
@@ -205,6 +206,10 @@ function getWithholdingFilename(application, withholding, ext) {
   return `원천징수동의서_${getBaseName(application, withholding)}_${getDateKey(application)}.${ext}`;
 }
 
+function getCombinedFilename(application, withholding) {
+  return `가입신청_원천징수_${getBaseName(application, withholding)}_${getDateKey(application)}.pdf`;
+}
+
 function triggerFileDownload(html, filename, mimeType) {
   const blob = new Blob(["\uFEFF", html], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -215,7 +220,8 @@ function triggerFileDownload(html, filename, mimeType) {
   URL.revokeObjectURL(url);
 }
 
-function wrapDocument(title, bodyHtml) {
+function wrapDocument(title, bodyHtml, { multiPage = false } = {}) {
+  const bodyClass = multiPage ? ' class="doc-multi"' : "";
   return `<!DOCTYPE html>
 <html lang="ko" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
 <head>
@@ -224,15 +230,15 @@ function wrapDocument(title, bodyHtml) {
   <title>${escapeHtml(title)}</title>
   <style>${DOC_STYLES}</style>
 </head>
-<body>
+<body${bodyClass}>
 ${bodyHtml}
 </body>
 </html>`;
 }
 
-export function buildApplicationDocumentHtml({ application = {}, sig1 }) {
+function applicationPageInner({ application = {}, sig1 }) {
   const app = application;
-  const body = `
+  return `
   <div class="doc-page-a4">
     <p class="doc-attach">[별지 제2호서식]</p>
     <h1 class="doc-title-official">공무원직장협의회 가입신청서</h1>
@@ -267,14 +273,14 @@ export function buildApplicationDocumentHtml({ application = {}, sig1 }) {
     </div>
     <p class="doc-recipient-main">고용노동부공무원직장협의회 귀중</p>
   </div>`;
-  return wrapDocument(`가입신청서 - ${app.name || ""}`, body);
 }
 
-export function buildWithholdingDocumentHtml({ application = {}, withholding = {}, sig2 }) {
+function withholdingPageInner({ application = {}, withholding = {}, sig2 }) {
   const app = application;
   const wh = withholding;
   const periodText = wh.periodStart ? formatPeriodDate(wh.periodStart) : ".  .  .";
-  const body = `
+  const name = wh.name || app.name;
+  return `
   <div class="doc-page-a4">
     <h1 class="doc-title-official">원천징수 동의(신규)서<sup>1)</sup></h1>
     <table class="doc-tbl">
@@ -288,53 +294,52 @@ export function buildWithholdingDocumentHtml({ application = {}, withholding = {
       </tr>
       <tr>
         <th>성&nbsp;&nbsp;&nbsp;명</th>
-        <td>${escapeHtml(wh.name || app.name)}</td>
+        <td>${escapeHtml(name)}</td>
         <th>생년월일</th>
         <td>${escapeHtml(wh.dob ? formatPeriodDate(wh.dob) : "")}</td>
       </tr>
     </table>
-    <table class="doc-tbl doc-tbl--center">
-      <thead>
-        <tr>
-          <th>구분</th>
-          <th>동의사항</th>
-          <th>금액(단위:원)</th>
-          <th>기간</th>
-          <th>동의사유 등</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>신규신청(동의)</td>
-          <td>직협회비</td>
-          <td>봉급의 0.6%</td>
-          <td>${escapeHtml(periodText)}</td>
-          <td>직협회비 납부 동의</td>
-        </tr>
-      </tbody>
-    </table>
     <div class="doc-body-text">
+      <p>구분: 신규신청(동의) / 동의사항: 직협회비 / 금액(단위:원): 봉급의 0.6% / 기간: ${escapeHtml(periodText)} / 동의사유: 직협회비 납부 동의</p>
       <p>본인은 「공무원보수규정」 제19조의2제1항제5호의 규정에 따라 상기 내역이 매월 본인의 보수에서 원천징수되는 것을 동의(또는 변경, 철회) 합니다.</p>
-    </div>
-    <div class="doc-sign-area">
-      <p class="doc-sign-date">${formatKrDate(wh.consentDate)}</p>
-      <p class="doc-sign-line">
-        <span>신청인 성명</span>
-        <span class="doc-sign-name">${escapeHtml(wh.name || app.name)}</span>
-        <span class="doc-sig-box">${sigImg(sig2, "서명")}</span>
-      </p>
-      <p class="doc-sig-note">※ (인)은 자필 서명으로 한다.</p>
-    </div>
-    <p class="doc-recipient-office">( ${escapeHtml(wh.regionalOffice || "　　　")} )지방고용노동청 지출관 귀하</p>
-    <div class="doc-footnotes-sm">
       <p>1) 동의사항은 1건당 1매의 서식을 작성합니다.</p>
       <p>2) 동의사유 등란에는 동의사항에 대한 구체적인 사유를 기재합니다.</p>
       <p>3) 동의(또는 변경, 철회)는 해당 동의사항에 대하여만 효력이 있습니다.</p>
       <p>4) 기간란을 기재하지 않은 경우에는 1년간의 효력이 있는 것으로 봅니다.</p>
       <p>5) 동의(또는 변경, 철회)를 철회하고자 하는 경우에는 별도의 서식을 작성하여 제출합니다.</p>
     </div>
+    <div class="doc-sign-area">
+      <p class="doc-sign-date">${formatKrDate(wh.consentDate)}</p>
+      <p class="doc-sign-line">
+        <span>신청인 성명</span>
+        <span class="doc-sign-name">${escapeHtml(name)}</span>
+        <span class="doc-sig-box">${sigImg(sig2, "서명")}</span>
+      </p>
+      <p class="doc-sig-note">※ (인)은 자필 서명으로 한다.</p>
+    </div>
+    <p class="doc-recipient-office">( ${escapeHtml(wh.regionalOffice || "　　　")} )지방고용노동청 지출관 귀하</p>
   </div>`;
-  return wrapDocument(`원천징수 동의서 - ${wh.name || app.name || ""}`, body);
+}
+
+export function buildApplicationDocumentHtml(props) {
+  const { application, sig1 } = resolveSignupData(props);
+  return wrapDocument(`가입신청서 - ${application.name || ""}`, applicationPageInner({ application, sig1 }));
+}
+
+export function buildWithholdingDocumentHtml(props) {
+  const { application, withholding, sig2 } = resolveSignupData(props);
+  return wrapDocument(
+    `원천징수 동의서 - ${withholding.name || application.name || ""}`,
+    withholdingPageInner({ application, withholding, sig2 })
+  );
+}
+
+export function buildCombinedSignupDocumentHtml(props) {
+  const data = resolveSignupData(props);
+  const body = `
+  <div class="doc-sheet">${applicationPageInner(data)}</div>
+  <div class="doc-sheet">${withholdingPageInner(data)}</div>`;
+  return wrapDocument(`가입신청 - ${getBaseName(data.application, data.withholding)}`, body, { multiPage: true });
 }
 
 function downloadFile(html, filename, format) {
@@ -383,7 +388,9 @@ function waitForImages(root) {
   );
 }
 
-async function renderHtmlToPdf(html, filename) {
+async function renderHtmlToPdf(html, filename, { pages = 1 } = {}) {
+  const pageHeight = 1123;
+  const totalHeight = pageHeight * pages;
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
   Object.assign(iframe.style, {
@@ -391,7 +398,7 @@ async function renderHtmlToPdf(html, filename) {
     left: "-10000px",
     top: "0",
     width: "794px",
-    height: "1123px",
+    height: `${totalHeight}px`,
     border: "none",
     visibility: "hidden",
   });
@@ -423,12 +430,12 @@ async function renderHtmlToPdf(html, filename) {
           logging: false,
           scrollY: 0,
           width: 794,
-          height: 1123,
+          height: totalHeight,
           windowWidth: 794,
-          windowHeight: 1123,
+          windowHeight: totalHeight,
         },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["avoid-all"] },
+        pagebreak: { mode: ["css", "legacy"], after: ".doc-sheet" },
       })
       .from(doc.body)
       .save();
@@ -437,22 +444,14 @@ async function renderHtmlToPdf(html, filename) {
   }
 }
 
-export async function downloadApplicationDocumentPdf(props) {
-  const { application, withholding, sig1 } = resolveSignupData(props);
-  const html = buildApplicationDocumentHtml({ application, sig1 });
-  await renderHtmlToPdf(html, getApplicationFilename(application, withholding, "pdf"));
-}
-
-export async function downloadWithholdingDocumentPdf(props) {
-  const { application, withholding, sig2 } = resolveSignupData(props);
-  const html = buildWithholdingDocumentHtml({ application, withholding, sig2 });
-  await renderHtmlToPdf(html, getWithholdingFilename(application, withholding, "pdf"));
-}
-
 export async function downloadSignupDocumentPdf(props) {
-  await downloadApplicationDocumentPdf(props);
-  await new Promise((resolve) => setTimeout(resolve, 600));
-  await downloadWithholdingDocumentPdf(props);
+  const { application, withholding } = resolveSignupData(props);
+  const html = buildCombinedSignupDocumentHtml(props);
+  await renderHtmlToPdf(html, getCombinedFilename(application, withholding), { pages: 2 });
+}
+
+export function printSignupDocument(props) {
+  openPrintWindow(buildCombinedSignupDocumentHtml(props));
 }
 
 export function downloadApplicationDocument(props, format = "doc") {
@@ -469,16 +468,6 @@ export function downloadWithholdingDocument(props, format = "doc") {
   downloadFile(html, getWithholdingFilename(application, withholding, ext), format);
 }
 
-export function printApplicationDocument(props) {
-  const { application, sig1 } = resolveSignupData(props);
-  openPrintWindow(buildApplicationDocumentHtml({ application, sig1 }));
-}
-
-export function printWithholdingDocument(props) {
-  const { application, withholding, sig2 } = resolveSignupData(props);
-  openPrintWindow(buildWithholdingDocumentHtml({ application, withholding, sig2 }));
-}
-
 export function downloadSignupDocument(props) {
   return downloadSignupDocumentPdf(props);
 }
@@ -493,5 +482,4 @@ export function downloadSignupDocumentAsHtml(props) {
   setTimeout(() => downloadWithholdingDocument(props, "html"), 400);
 }
 
-/** 미리보기·인쇄 모달용 HTML 조각 (React에서 dangerouslySetInnerHTML 대신 구조 참고) */
 export { DOC_STYLES };

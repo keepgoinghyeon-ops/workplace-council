@@ -1,15 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { submitSignupApplication, isSignupApiConfigured } from "../lib/signupApi";
 import {
-  downloadApplicationDocument,
-  downloadWithholdingDocument,
-  downloadApplicationDocumentPdf,
-  downloadWithholdingDocumentPdf,
   downloadSignupDocumentPdf,
   downloadSignupDocumentAsWord,
-  printApplicationDocument,
-  printWithholdingDocument,
 } from "../lib/signupDocumentDownload";
+import SignupPrintDocument from "../components/SignupPrintDocument";
 import FlexibleDateInput from "../components/FlexibleDateInput";
 
 function SignaturePad({ label, onChange }) {
@@ -88,18 +83,8 @@ export default function PageSignup() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const [pdfLoading, setPdfLoading] = useState("");
-
-  const runPdfDownload = async (key, fn) => {
-    setPdfLoading(key);
-    try {
-      await fn();
-    } catch (err) {
-      alert(err.message || "PDF 저장에 실패했습니다.");
-    } finally {
-      setPdfLoading("");
-    }
-  };
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const signupData = () => ({ application, withholding, sig1, sig2 });
 
@@ -173,87 +158,71 @@ export default function PageSignup() {
 
   if (step === 3) {
     return (
-      <section className="section">
-        <div className="container">
-          <div className="form-wrap" style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>
-            <h3 style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", marginBottom: 16, fontFamily: "Noto Serif KR, serif" }}>
-              제출이 완료되었습니다.
-            </h3>
-            <p style={{ color: "var(--text)", marginBottom: 12, fontSize: 15, lineHeight: 1.9, fontWeight: 600 }}>
-              담당자(소속지청 의장)에게 연락주시면 바로 처리해드리겠습니다.
-            </p>
-            <p style={{ color: "var(--text-soft)", marginBottom: 12, fontSize: 14, lineHeight: 1.9 }}>
-              <strong>{application.name}</strong>님, 가입 신청해 주셔서 감사합니다.
-            </p>
-            <p style={{ color: "var(--text-light)", marginBottom: 20, fontSize: 13, lineHeight: 1.7 }}>
-              PDF 파일에는 <strong>서명이 포함</strong>됩니다. (Word 파일은 서명이 보이지 않을 수 있습니다.)
-            </p>
-            <div className="signup-download-grid">
-              <div className="signup-download-card">
-                <h4>가입신청서</h4>
-                <button
-                  type="button"
-                  className="btn btn-primary btn-full"
-                  disabled={Boolean(pdfLoading)}
-                  onClick={() => runPdfDownload("app", () => downloadApplicationDocumentPdf(signupData()))}
-                >
-                  {pdfLoading === "app" ? "PDF 저장 중..." : "PDF 다운로드 (1페이지)"}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline btn-full"
-                  onClick={() => {
-                    try { printApplicationDocument(signupData()); }
-                    catch (e) { alert(e.message); }
-                  }}
-                >
-                  인쇄 (1페이지)
-                </button>
-              </div>
-              <div className="signup-download-card">
-                <h4>원천징수 동의서</h4>
-                <button
-                  type="button"
-                  className="btn btn-primary btn-full"
-                  disabled={Boolean(pdfLoading)}
-                  onClick={() => runPdfDownload("wh", () => downloadWithholdingDocumentPdf(signupData()))}
-                >
-                  {pdfLoading === "wh" ? "PDF 저장 중..." : "PDF 다운로드 (1페이지)"}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline btn-full"
-                  onClick={() => {
-                    try { printWithholdingDocument(signupData()); }
-                    catch (e) { alert(e.message); }
-                  }}
-                >
-                  인쇄 (1페이지)
-                </button>
-              </div>
+      <>
+        {showPreview && (
+          <SignupPrintDocument
+            application={application}
+            withholding={withholding}
+            sig1={sig1}
+            sig2={sig2}
+            onClose={() => setShowPreview(false)}
+          />
+        )}
+        <section className="section">
+          <div className="container">
+            <div className="form-wrap" style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>
+              <h3 style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", marginBottom: 16, fontFamily: "Noto Serif KR, serif" }}>
+                제출이 완료되었습니다.
+              </h3>
+              <p style={{ color: "var(--text)", marginBottom: 12, fontSize: 15, lineHeight: 1.9, fontWeight: 600 }}>
+                담당자(소속지청 의장)에게 연락주시면 바로 처리해드리겠습니다.
+              </p>
+              <p style={{ color: "var(--text-soft)", marginBottom: 12, fontSize: 14, lineHeight: 1.9 }}>
+                <strong>{application.name}</strong>님, 가입 신청해 주셔서 감사합니다.
+              </p>
+              <p style={{ color: "var(--text-light)", marginBottom: 20, fontSize: 13, lineHeight: 1.7 }}>
+                가입신청서·원천징수 동의서를 <strong>A4 2페이지</strong>로 미리보기·인쇄·PDF 저장할 수 있습니다. (Word는 서명 미포함)
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ width: "100%", marginBottom: 10 }}
+                onClick={() => setShowPreview(true)}
+              >
+                미리보기 · 인쇄 (2페이지)
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ width: "100%", marginBottom: 10 }}
+                disabled={pdfLoading}
+                onClick={async () => {
+                  setPdfLoading(true);
+                  try {
+                    await downloadSignupDocumentPdf(signupData());
+                  } catch (err) {
+                    alert(err.message || "PDF 저장에 실패했습니다.");
+                  } finally {
+                    setPdfLoading(false);
+                  }
+                }}
+              >
+                {pdfLoading ? "PDF 저장 중..." : "PDF 다운로드 (서명 포함 · 2페이지)"}
+              </button>
+              <button
+                type="button"
+                className="popup-dismiss"
+                style={{ marginBottom: 12 }}
+                onClick={() => downloadSignupDocumentAsWord(signupData())}
+              >
+                Word 파일로 받기 (서명 미포함)
+              </button>
+              <button type="button" className="btn btn-outline" style={{ width: "100%" }} onClick={reset}>새로 신청하기</button>
             </div>
-            <button
-              type="button"
-              className="btn btn-outline"
-              style={{ width: "100%", margin: "12px 0 8px" }}
-              disabled={Boolean(pdfLoading)}
-              onClick={() => runPdfDownload("all", () => downloadSignupDocumentPdf(signupData()))}
-            >
-              {pdfLoading === "all" ? "PDF 저장 중..." : "두 PDF 모두 다운로드"}
-            </button>
-            <button
-              type="button"
-              className="popup-dismiss"
-              style={{ marginBottom: 12 }}
-              onClick={() => downloadSignupDocumentAsWord(signupData())}
-            >
-              Word 파일로 받기 (서명 미포함)
-            </button>
-            <button type="button" className="btn btn-outline" style={{ width: "100%" }} onClick={reset}>새로 신청하기</button>
           </div>
-        </div>
-      </section>
+        </section>
+      </>
     );
   }
 

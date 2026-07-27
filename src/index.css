@@ -1772,6 +1772,9 @@ a { color: inherit; text-decoration: none; }
   box-shadow: 0 20px 60px rgba(62,50,50,0.25);
   overflow: hidden;
 }
+.print-modal--wide {
+  width: min(920px, 100%);
+}
 .print-toolbar {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 24px;
@@ -1845,6 +1848,27 @@ a { color: inherit; text-decoration: none; }
   justify-content: center;
   padding: 12mm;
   color: #000;
+}
+.print-area--combined {
+  width: 210mm;
+  margin: 0 auto;
+  padding: 24px 0;
+  background: #e8e8e8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  color: #000;
+}
+.doc-sheet {
+  width: 210mm;
+  min-height: 297mm;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12mm;
 }
 
 /* A4 1장 중앙 — 공식 서식 (미리보기·인쇄) */
@@ -2215,17 +2239,42 @@ a { color: inherit; text-decoration: none; }
     padding: 0 !important;
     background: none !important;
     box-shadow: none !important;
+  }
+
+  .print-area--combined {
+    gap: 0 !important;
+    background: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .doc-sheet {
+    box-shadow: none !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .doc-sheet:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .print-area--a4 {
+    box-shadow: none !important;
+    padding: 0 !important;
     width: 210mm !important;
     min-height: 297mm !important;
     height: 297mm !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-  }
-
-  .print-area--a4 {
-    box-shadow: none !important;
-    padding: 0 !important;
   }
 
   .doc-page-a4 {
