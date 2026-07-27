@@ -92,72 +92,74 @@ export default function SignupPrintDocument(props) {
           </div>
         </div>
 
-        <div className="print-area" id="print-area">
+        <div className="print-area print-area--a4" id="print-area">
           {tab === "application" ? (
-            <div className="doc-page doc-official">
-              <div className="doc-official-top">
-                <span className="doc-attach-label">[별지 제2호서식]</span>
-                <h1 className="doc-official-title">공무원직장협의회 가입신청서</h1>
-              </div>
-              <table className="doc-table doc-official-table">
+            <div className="doc-page-a4">
+              <p className="doc-attach">[별지 제2호서식]</p>
+              <h1 className="doc-title-official">공무원직장협의회 가입신청서</h1>
+              <table className="doc-tbl">
                 <tbody>
                   <tr>
-                    <th>소속</th>
-                    <td>{application.affiliation || "—"}</td>
-                    <th>직급</th>
-                    <td>{application.rank || "—"}</td>
+                    <th>소&nbsp;&nbsp;&nbsp;속</th>
+                    <td colSpan={3}>{application.affiliation || "—"}</td>
                   </tr>
                   <tr>
-                    <th>이름</th>
+                    <th>직&nbsp;&nbsp;&nbsp;급</th>
+                    <td colSpan={3}>{application.rank || "—"}</td>
+                  </tr>
+                  <tr>
+                    <th>이&nbsp;&nbsp;&nbsp;름</th>
                     <td>{application.name || "—"}</td>
-                    <th>성별</th>
+                    <th>성&nbsp;&nbsp;&nbsp;별</th>
                     <td>{application.gender || "—"}</td>
                   </tr>
                 </tbody>
               </table>
-              <div className="doc-official-body">
+              <div className="doc-body-text">
                 <p>위 신청인은 공무원 직장협의회의 설립·운영에 관한 법률 시행령 제6조 제1항의 규정에 의거 고용노동부공무원직장협의회의 회원으로 가입하고자 합니다.</p>
                 <p>(급여에서 매월 직장협의회가 정하는 회비를 원천 공제하는 것에 동의함 : e-사람에서 개별 조치 또는 별도 납부)</p>
                 <p>※ 소속 기관에 직협이 설립되어 전국 조직에 회비 납부 시까지 직장협의회 회비를 전국 조직에 직접 납부하는 것에 동의함.</p>
               </div>
-              <div className="doc-official-sign-block">
-                <p className="doc-official-date" dangerouslySetInnerHTML={{ __html: formatKrDate(application.applicationDate || application.joinDate) }} />
-                <div className="doc-official-sign-line">
+              <div className="doc-sign-area">
+                <p className="doc-sign-date" dangerouslySetInnerHTML={{ __html: formatKrDate(application.applicationDate || application.joinDate) }} />
+                <p className="doc-sign-line">
                   <span>신청인</span>
-                  <span className="doc-official-name">{application.name}</span>
-                  <div className="doc-sig-box doc-sig-box--sm">
-                    {sig1 ? <img src={sig1} alt="서명" /> : <span className="doc-sig-placeholder">(인)</span>}
-                  </div>
-                </div>
+                  <span className="doc-sign-name">{application.name}</span>
+                  <span className="doc-sig-box">
+                    {sig1 ? <img src={sig1} alt="서명" className="doc-sig-img" /> : <span className="doc-sig-ph">(인)</span>}
+                  </span>
+                </p>
               </div>
-              <p className="doc-official-recipient">고용노동부공무원직장협의회 귀중</p>
+              <p className="doc-recipient-main">고용노동부공무원직장협의회 귀중</p>
             </div>
           ) : (
-            <div className="doc-page doc-official">
-              <h1 className="doc-official-title">원천징수 동의(신규)서<sup>1)</sup></h1>
-              <table className="doc-table doc-official-table">
+            <div className="doc-page-a4">
+              <h1 className="doc-title-official">원천징수 동의(신규)서<sup>1)</sup></h1>
+              <table className="doc-tbl">
                 <tbody>
                   <tr>
-                    <th>소속</th>
-                    <td>{withholding.affiliation || application.affiliation || "—"}</td>
-                    <th>직급</th>
-                    <td>{withholding.rank || application.rank || "—"}</td>
+                    <th>소&nbsp;&nbsp;&nbsp;속</th>
+                    <td colSpan={3}>{withholding.affiliation || application.affiliation || "—"}</td>
                   </tr>
                   <tr>
-                    <th>성명</th>
+                    <th>직&nbsp;&nbsp;&nbsp;급</th>
+                    <td colSpan={3}>{withholding.rank || application.rank || "—"}</td>
+                  </tr>
+                  <tr>
+                    <th>성&nbsp;&nbsp;&nbsp;명</th>
                     <td>{withholding.name || application.name || "—"}</td>
                     <th>생년월일</th>
                     <td>{withholding.dob ? formatPeriodDate(withholding.dob) : "—"}</td>
                   </tr>
                 </tbody>
               </table>
-              <p className="doc-official-period">기간&nbsp;&nbsp;{formatPeriodDate(withholding.periodStart)}</p>
-              <table className="doc-table doc-consent-table">
+              <table className="doc-tbl doc-tbl--center">
                 <thead>
                   <tr>
                     <th>구분</th>
                     <th>동의사항</th>
                     <th>금액(단위:원)</th>
+                    <th>기간</th>
                     <th>동의사유 등</th>
                   </tr>
                 </thead>
@@ -166,28 +168,29 @@ export default function SignupPrintDocument(props) {
                     <td>신규신청(동의)</td>
                     <td>직협회비</td>
                     <td>봉급의 0.6%</td>
+                    <td>{formatPeriodDate(withholding.periodStart)}</td>
                     <td>직협회비 납부 동의</td>
                   </tr>
                 </tbody>
               </table>
-              <div className="doc-official-body">
+              <div className="doc-body-text">
                 <p>본인은 「공무원보수규정」 제19조의2제1항제5호의 규정에 따라 상기 내역이 매월 본인의 보수에서 원천징수되는 것을 동의(또는 변경, 철회) 합니다.</p>
               </div>
-              <div className="doc-official-sign-block">
-                <p className="doc-official-date" dangerouslySetInnerHTML={{ __html: formatKrDate(withholding.consentDate) }} />
-                <div className="doc-official-sign-line">
+              <div className="doc-sign-area">
+                <p className="doc-sign-date" dangerouslySetInnerHTML={{ __html: formatKrDate(withholding.consentDate) }} />
+                <p className="doc-sign-line">
                   <span>신청인 성명</span>
-                  <span className="doc-official-name">{withholding.name || application.name}</span>
-                  <div className="doc-sig-box doc-sig-box--sm">
-                    {sig2 ? <img src={sig2} alt="서명" /> : <span className="doc-sig-placeholder">(인)</span>}
-                  </div>
-                </div>
-                <p className="doc-official-sig-note">※ (인)은 자필 서명으로 한다.</p>
+                  <span className="doc-sign-name">{withholding.name || application.name}</span>
+                  <span className="doc-sig-box">
+                    {sig2 ? <img src={sig2} alt="서명" className="doc-sig-img" /> : <span className="doc-sig-ph">(인)</span>}
+                  </span>
+                </p>
+                <p className="doc-sig-note">※ (인)은 자필 서명으로 한다.</p>
               </div>
-              <p className="doc-official-recipient doc-official-recipient--office">
+              <p className="doc-recipient-office">
                 ( {withholding.regionalOffice || "　　　"} )지방고용노동청 지출관 귀하
               </p>
-              <div className="doc-official-footnotes">
+              <div className="doc-footnotes-sm">
                 <p>1) 동의사항은 1건당 1매의 서식을 작성합니다.</p>
                 <p>2) 동의사유 등란에는 동의사항에 대한 구체적인 사유를 기재합니다.</p>
                 <p>3) 동의(또는 변경, 철회)는 해당 동의사항에 대하여만 효력이 있습니다.</p>

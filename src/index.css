@@ -1768,7 +1768,7 @@ a { color: inherit; text-decoration: none; }
 .print-modal {
   background: var(--white);
   border-radius: var(--radius-xl);
-  width: min(720px, 100%);
+  width: min(880px, 100%);
   box-shadow: 0 20px 60px rgba(62,50,50,0.25);
   overflow: hidden;
 }
@@ -1831,9 +1831,146 @@ a { color: inherit; text-decoration: none; }
    인쇄 영역 (화면 + 인쇄 공통)
 ─────────────────────────────────────────── */
 .print-area {
-  padding: 32px 40px;
+  padding: 24px;
   font-family: 'Noto Sans KR', sans-serif;
 }
+.print-area--a4 {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12mm;
+  color: #000;
+}
+
+/* A4 1장 중앙 — 공식 서식 (미리보기·인쇄) */
+.doc-page-a4 {
+  width: 186mm;
+  max-width: 186mm;
+  padding: 4mm 2mm;
+}
+.doc-attach {
+  font-size: 10pt;
+  color: #333;
+  margin: 0 0 10mm;
+}
+.doc-title-official {
+  font-size: 17pt;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.12em;
+  margin: 0 0 8mm;
+  line-height: 1.4;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.doc-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 5mm;
+  font-size: 11pt;
+  table-layout: fixed;
+}
+.doc-tbl th,
+.doc-tbl td {
+  border: 1px solid #000;
+  padding: 7px 8px;
+  vertical-align: middle;
+  word-break: keep-all;
+}
+.doc-tbl th {
+  width: 18%;
+  font-weight: 700;
+  text-align: center;
+  background: #fff;
+  letter-spacing: 0.15em;
+}
+.doc-tbl td {
+  text-align: left;
+  min-height: 32px;
+}
+.doc-tbl--center th,
+.doc-tbl--center td {
+  text-align: center;
+}
+.doc-body-text {
+  font-size: 14pt;
+  line-height: 1.9;
+  margin: 5mm 0 8mm;
+  text-align: justify;
+}
+.doc-body-text p { margin: 0 0 6px; }
+.doc-sign-area {
+  margin-top: 10mm;
+  text-align: right;
+  font-size: 11pt;
+}
+.doc-sign-date {
+  margin: 0 0 8mm;
+  letter-spacing: 0.05em;
+}
+.doc-sign-line {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.doc-sign-name {
+  min-width: 70px;
+  text-align: center;
+  font-weight: 600;
+}
+.doc-page-a4 .doc-sig-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22mm;
+  height: 12mm;
+  border: 1px solid #000;
+  border-radius: 0;
+  background: #fff;
+}
+.doc-sig-img {
+  max-width: 20mm;
+  max-height: 11mm;
+  object-fit: contain;
+}
+.doc-sig-ph {
+  color: #666;
+  font-size: 10pt;
+}
+.doc-sig-note {
+  margin: 4px 0 0;
+  font-size: 9pt;
+  color: #333;
+}
+.doc-recipient-main {
+  margin-top: 12mm;
+  font-size: 25pt;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+}
+.doc-recipient-office {
+  margin-top: 10mm;
+  font-size: 25pt;
+  font-weight: 700;
+  text-align: left;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+}
+.doc-footnotes-sm {
+  margin-top: 8mm;
+  font-size: 9pt;
+  color: #333;
+  line-height: 1.65;
+}
+.doc-footnotes-sm p { margin: 0 0 2px; }
 
 .doc-page {
   max-width: 640px;
@@ -2072,8 +2209,28 @@ a { color: inherit; text-decoration: none; }
     border-radius: 0 !important;
   }
 
+  @page { size: A4 portrait; margin: 12mm; }
+
   .print-area {
-    padding: 16px 24px !important;
+    padding: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    height: 297mm !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .print-area--a4 {
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  .doc-page-a4 {
+    page-break-inside: avoid;
+    page-break-after: avoid;
   }
 
   /* 페이지 나누기 */
@@ -2084,26 +2241,29 @@ a { color: inherit; text-decoration: none; }
   /* 인쇄 폰트 */
   body { font-size: 12pt; }
   .doc-title { font-size: 20pt; }
-  .doc-official-body { font-size: 14pt !important; }
-  .doc-official-recipient,
-  .doc-official-recipient--office { font-size: 25pt !important; }
+  .doc-body-text { font-size: 14pt !important; }
+  .doc-recipient-main,
+  .doc-recipient-office { font-size: 25pt !important; }
 
   /* 테이블 테두리 인쇄 */
+  .doc-tbl th, .doc-tbl td,
   .doc-table th, .doc-table td {
-    border: 1px solid #999 !important;
+    border: 1px solid #000 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  .doc-tbl th,
   .doc-table th {
-    background: #f0f0f0 !important;
+    background: #fff !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
   /* 서명 이미지 인쇄 */
-  .doc-sig-box img {
-    width: 100% !important;
-    height: 100% !important;
+  .doc-sig-box img,
+  .doc-sig-img {
+    max-width: 20mm !important;
+    max-height: 11mm !important;
     object-fit: contain !important;
   }
 }
