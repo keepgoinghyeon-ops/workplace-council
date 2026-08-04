@@ -214,6 +214,45 @@ export async function fileToBase64(file) {
   });
 }
 
+function explainNonJsonResponse(text, status) {
+  const sample = String(text || "").replace(/\s+/g, " ").trim().slice(0, 120);
+  if (!sample) {
+    return (
+      "Google Apps Script가 빈 응답을 반환했습니다. " +
+      "Apps Script에서 board-api.gs를 저장한 뒤 웹 앱을 '새 버전'으로 재배포하고, 액세스를 '모든 사용자'로 설정해 주세요. " +
+      "URL은 /exec 로 끝나야 합니다."
+    );
+  }
+  if (/<!DOCTYPE|<html|Sign in|로그인|accounts\.google/i.test(sample)) {
+    return (
+      "Google 로그인/권한 페이지가 반환되었습니다. " +
+      "웹 앱 배포에서 액세스를 '모든 사용자'로 설정하고, Drive 권한 허용 후 새 버전으로 재배포해 주세요."
+    );
+  }
+  if (/Error|Exception|Script function not found/i.test(sample)) {
+    return (
+      `Google Apps Script 실행 오류가 발생했습니다. (${status || "?"}) ` +
+      "Apps Script 편집기에서 migrateBoardSheet / setupDriveFolder 를 직접 실행해 권한을 허용한 뒤 재배포해 주세요."
+    );
+  }
+  return (
+    `Google Apps Script 응답을 읽을 수 없습니다. (HTTP ${status || "?"}) ` +
+    "URL이 /exec 인지, 최신 board-api.gs 재배포 여부를 확인해 주세요."
+  );
+}
+
+async function parseJsonResponse(response) {
+  const text = await response.text();
+  if (!text || !String(text).trim()) {
+    throw new Error(explainNonJsonResponse("", response.status));
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(explainNonJsonResponse(text, response.status));
+  }
+}
+
 async function apiGet(params) {
   if (!API_URL) throw new Error("자유게시판 API URL이 설정되지 않았습니다.");
   const query = new URLSearchParams({ ...params, _: String(Date.now()) });
@@ -223,12 +262,7 @@ async function apiGet(params) {
   } catch (err) {
     throw normalizeNetworkError(err);
   }
-  let result;
-  try {
-    result = await response.json();
-  } catch {
-    throw new Error("Google Apps Script 응답을 읽을 수 없습니다.");
-  }
+  const result = await parseJsonResponse(response);
   const normalized = normalizeApiResult(result);
   if (!response.ok || !normalized.success) {
     throw new Error(normalized.error || "요청에 실패했습니다.");
@@ -248,12 +282,7 @@ async function apiPost(payload) {
   } catch (err) {
     throw normalizeNetworkError(err);
   }
-  let result;
-  try {
-    result = await response.json();
-  } catch {
-    throw new Error("서버 응답을 확인할 수 없습니다.");
-  }
+  const result = await parseJsonResponse(response);
   const normalized = normalizeApiResult(result);
   if (!response.ok || !normalized.success) {
     throw new Error(normalized.error || "요청에 실패했습니다.");
