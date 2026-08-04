@@ -16,6 +16,7 @@ import {
   isVideoFile,
   getVideoEmbedUrl,
   getMediaOpenUrl,
+  getImageDisplayCandidates,
   getRememberedBoardEditKey,
 } from "../lib/boardApi";
 
@@ -34,6 +35,37 @@ const EMPTY_FORM = {
   editKey: "",
 };
 
+function BoardImage({ file }) {
+  const candidates = getImageDisplayCandidates(file);
+  const [index, setIndex] = useState(0);
+  const src = candidates[index] || "";
+  const openUrl = getMediaOpenUrl(file);
+
+  if (!src && !openUrl) return null;
+
+  return (
+    <a
+      href={openUrl || src}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="board-gallery-item"
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={file.name || "첨부 사진"}
+          loading="lazy"
+          onError={() => {
+            if (index < candidates.length - 1) setIndex((v) => v + 1);
+          }}
+        />
+      ) : (
+        <span className="board-media-fallback">🖼 {file.name || "사진 보기"}</span>
+      )}
+    </a>
+  );
+}
+
 function BoardMedia({ files }) {
   const list = files || [];
   if (!list.length) return null;
@@ -47,38 +79,25 @@ function BoardMedia({ files }) {
       {images.length > 0 && (
         <div className="board-gallery">
           {images.map((file, i) => (
-            <a
-              key={`img-${i}`}
-              href={getMediaOpenUrl(file) || file.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="board-gallery-item"
-            >
-              <img src={file.url} alt={file.name || "첨부 사진"} loading="lazy" />
-            </a>
+            <BoardImage key={`img-${i}`} file={file} />
           ))}
         </div>
       )}
       {videos.map((file, i) => {
         const embed = getVideoEmbedUrl(file);
         const openUrl = getMediaOpenUrl(file) || embed;
-        const isDrivePreview = /drive\.google\.com\/file\/d\/.+\/preview/i.test(embed);
         return (
           <div key={`vid-${i}`} className="board-video-wrap">
-            {isDrivePreview ? (
+            {embed ? (
               <iframe
                 src={embed}
                 title={file.name || "첨부 동영상"}
                 className="board-video-frame"
                 allow="autoplay; encrypted-media; fullscreen"
                 allowFullScreen
-                referrerPolicy="no-referrer-when-downgrade"
+                referrerPolicy="strict-origin-when-cross-origin"
               />
-            ) : (
-              <video className="board-video" src={embed || file.url} controls preload="metadata" playsInline>
-                <track kind="captions" />
-              </video>
-            )}
+            ) : null}
             <a href={openUrl} target="_blank" rel="noopener noreferrer" className="board-media-link">
               🎬 {file.name || "새 창에서 동영상 보기"}
             </a>

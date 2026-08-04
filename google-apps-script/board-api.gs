@@ -1,15 +1,13 @@
 /**
- * 자유게시판 API — Google Sheets + Google Drive
+ * Board API - Google Sheets + Google Drive
  *
- * [초기 설정 — 반드시 순서대로]
- * 1. 이 파일 전체를 Apps Script에 붙여넣기
- * 2. 스크립트 속성: BOARD_ADMIN_TOKEN = 관리자 비밀번호
- * 3. 저장 후 실행: migrateBoardSheet()  (권한 허용)
- * 4. 실행: setupDriveFolder()  (Drive 권한 허용)
- * 5. 배포 → 웹 앱 → 새 버전
- *    - 실행 계정: 나
- *    - 액세스: 모든 사용자
- * 6. URL이 /exec 로 끝나는지 확인 → VITE_BOARD_API_URL
+ * Setup:
+ * 1. Paste this entire file into Apps Script (Code.gs)
+ * 2. Script property: BOARD_ADMIN_TOKEN = admin password
+ * 3. Run migrateBoardSheet() and allow permissions
+ * 4. Run setupDriveFolder() and allow Drive access
+ * 5. Deploy > New deployment > Web app > Anyone
+ * 6. Use the /exec URL as VITE_BOARD_API_URL
  */
 
 var BOARD_SHEET = "자유게시판";
@@ -221,19 +219,49 @@ function mediaUrl_(fileId, mimeType) {
   if (String(mimeType || "").indexOf("video/") === 0) {
     return "https://drive.google.com/file/d/" + fileId + "/preview";
   }
-  return "https://drive.google.com/uc?export=view&id=" + fileId;
+  // uc?export=view 는 '파일 없음'이 자주 나므로 thumbnail 사용
+  return "https://drive.google.com/thumbnail?id=" + fileId + "&sz=w1600";
+}
+
+function viewUrl_(fileId) {
+  return fileId ? "https://drive.google.com/file/d/" + fileId + "/view" : "";
+}
+
+function previewUrl_(fileId) {
+  return fileId ? "https://drive.google.com/file/d/" + fileId + "/preview" : "";
 }
 
 function normalizeSavedFile_(f) {
   var mime = guessMime_(f.name, f.mimeType);
-  var id = f.id || "";
+  var id = f.id || extractDriveId_(f.url || f.driveUrl || "");
+  var isVideo = String(mime).indexOf("video/") === 0;
   return {
     name: f.name || "",
     mimeType: mime,
     id: id,
     url: f.url || mediaUrl_(id, mime),
-    driveUrl: f.driveUrl || (id ? "https://drive.google.com/file/d/" + id + "/view" : ""),
+    thumbUrl: f.thumbUrl || (id && !isVideo ? "https://drive.google.com/thumbnail?id=" + id + "&sz=w1600" : ""),
+    previewUrl: f.previewUrl || previewUrl_(id),
+    driveUrl: f.driveUrl || viewUrl_(id),
   };
+}
+
+function extractDriveId_(url) {
+  var s = String(url || "");
+  var m = s.match(/\/d\/([^/]+)/) || s.match(/[?&]id=([^&]+)/);
+  return m ? m[1] : "";
+}
+
+function sharePublic_(file) {
+  try {
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (e1) {
+    try {
+      file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
+    } catch (e2) {
+      // Workspace 정책으로 공개 공유가 막혀 있을 수 있음
+    }
+  }
 }
 
 function saveFiles_(files) {
@@ -250,15 +278,19 @@ function saveFiles_(files) {
       f.name
     );
     var file = folder.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    sharePublic_(file);
+    Utilities.sleep(300); // 공유/인덱싱 반영 대기
     var id = file.getId();
-    saved.push(normalizeSavedFile_({
+    var isVideo = String(mime).indexOf("video/") === 0;
+    saved.push({
       name: f.name,
       mimeType: mime,
       id: id,
-      url: mediaUrl_(id, mime),
-      driveUrl: file.getUrl(),
-    }));
+      url: isVideo ? previewUrl_(id) : "https://drive.google.com/thumbnail?id=" + id + "&sz=w1600",
+      thumbUrl: isVideo ? "" : "https://drive.google.com/thumbnail?id=" + id + "&sz=w1600",
+      previewUrl: previewUrl_(id),
+      driveUrl: viewUrl_(id),
+    });
   });
 
   return saved;

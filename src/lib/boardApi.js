@@ -93,14 +93,19 @@ export function getRememberedBoardEditKey(postId) {
 }
 
 export function normalizeBoardPost(raw = {}) {
-  const files = (raw.files || raw.첨부 || raw.첨부파일 || []).map((f) => ({
-    ...f,
-    name: f.name || f.파일명 || "",
-    mimeType: f.mimeType || f.type || "",
-    url: f.url || f.link || "",
-    driveUrl: f.driveUrl || f.drive || "",
-    id: f.id || "",
-  }));
+  const files = (raw.files || raw.첨부 || raw.첨부파일 || []).map((f) => {
+    const id = f.id || "";
+    return {
+      ...f,
+      name: f.name || f.파일명 || "",
+      mimeType: f.mimeType || f.type || "",
+      url: f.url || f.link || "",
+      thumbUrl: f.thumbUrl || "",
+      previewUrl: f.previewUrl || "",
+      driveUrl: f.driveUrl || f.drive || "",
+      id,
+    };
+  });
 
   let title = String(raw.title || raw.제목 || "").trim();
   let content = String(raw.content || raw.내용 || "");
@@ -166,19 +171,48 @@ export function isVideoFile(file) {
   return false;
 }
 
+export function getDriveFileId(file) {
+  if (!file) return "";
+  if (file.id) return String(file.id);
+  const from =
+    String(file.url || "") +
+    " " +
+    String(file.driveUrl || "") +
+    " " +
+    String(file.previewUrl || "");
+  const match = from.match(/\/d\/([^/]+)/) || from.match(/[?&]id=([^&]+)/);
+  return match?.[1] || "";
+}
+
+export function getImageDisplayCandidates(file) {
+  const id = getDriveFileId(file);
+  const list = [];
+  if (file?.thumbUrl) list.push(file.thumbUrl);
+  if (id) {
+    list.push(`https://drive.google.com/thumbnail?id=${id}&sz=w1600`);
+    list.push(`https://lh3.googleusercontent.com/d/${id}`);
+  }
+  if (file?.url && !/uc\?export=view/i.test(file.url)) list.push(file.url);
+  if (file?.url) list.push(file.url);
+  return [...new Set(list.filter(Boolean))];
+}
+
 export function getVideoEmbedUrl(file) {
   if (!file) return "";
-  if (file.id) return `https://drive.google.com/file/d/${file.id}/preview`;
+  const id = getDriveFileId(file);
+  if (id) return `https://drive.google.com/file/d/${id}/preview`;
+  if (file.previewUrl) return file.previewUrl;
   const url = String(file.url || "");
   if (url.includes("/preview")) return url;
-  const match = url.match(/\/file\/d\/([^/]+)/) || String(file.driveUrl || "").match(/\/file\/d\/([^/]+)/);
-  if (match?.[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
   return url;
 }
 
 export function getMediaOpenUrl(file) {
   if (!file) return "";
-  return file.driveUrl || (file.id ? `https://drive.google.com/file/d/${file.id}/view` : file.url) || "";
+  const id = getDriveFileId(file);
+  if (file.driveUrl && !/uc\?export=view/i.test(file.driveUrl)) return file.driveUrl;
+  if (id) return `https://drive.google.com/file/d/${id}/view`;
+  return file.url || "";
 }
 
 export function validateBoardFiles(files) {
