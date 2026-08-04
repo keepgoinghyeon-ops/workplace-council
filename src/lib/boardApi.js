@@ -292,19 +292,40 @@ async function apiPost(payload) {
 
 export async function fetchBoardApiStatus() {
   if (!API_URL) {
-    return { configured: false, apiVersion: BOARD_API_REQUIRED_VERSION, supportsMedia: true };
+    return {
+      configured: false,
+      apiVersion: BOARD_API_REQUIRED_VERSION,
+      supportsMedia: true,
+      outdated: false,
+    };
   }
+
+  const fromVersion = (apiVersion, extra = {}) => ({
+    configured: true,
+    apiVersion,
+    supportsMedia: apiVersion >= BOARD_API_REQUIRED_VERSION,
+    outdated: apiVersion > 0 && apiVersion < BOARD_API_REQUIRED_VERSION,
+    ...extra,
+  });
+
   try {
     const result = await apiGet({ action: "status" });
-    const apiVersion = result.apiVersion || 0;
-    return {
-      configured: true,
-      apiVersion,
-      supportsMedia: apiVersion >= BOARD_API_REQUIRED_VERSION,
-      outdated: apiVersion < BOARD_API_REQUIRED_VERSION,
-    };
+    return fromVersion(result.apiVersion || 0);
   } catch {
-    return { configured: true, apiVersion: 0, supportsMedia: false, outdated: true };
+    // status 액션이 없거나 실패한 경우 list 응답의 apiVersion으로 재확인
+    try {
+      const list = await apiGet({ action: "list" });
+      return fromVersion(list.apiVersion || 0, { probedVia: "list" });
+    } catch (err) {
+      return {
+        configured: true,
+        apiVersion: 0,
+        supportsMedia: true, // 판별 실패 시 첨부를 막지 않음
+        outdated: false,
+        unreachable: true,
+        error: err.message || "서버 상태를 확인할 수 없습니다.",
+      };
+    }
   }
 }
 
@@ -341,13 +362,6 @@ export async function submitBoardPost({
   const fileError = validateBoardFiles(files);
   if (fileError) throw new Error(fileError);
 
-  const status = await fetchBoardApiStatus();
-  if (files?.length && status.outdated) {
-    throw new Error(
-      "첨부파일은 서버 스크립트 업데이트 후 사용할 수 있습니다. Google Apps Script에 최신 board-api.gs를 붙여넣고 migrateBoardSheet()·setupDriveFolder() 실행 후 웹 앱을 새 버전으로 재배포해 주세요."
-    );
-  }
-
   const encodedFiles = await Promise.all(Array.from(files || []).map(fileToBase64));
   // 구버전 서버는 title 필드를 무시하므로, 본문에 제목을 함께 넣어 호환합니다.
   const packedContent = encodeBoardBody(trimmedTitle, trimmedContent);
@@ -374,6 +388,11 @@ export async function submitBoardPost({
     // 서버가 제목을 완전히 누락한 경우(아주 옛 스크립트) 클라이언트가 보정
     if (!post.title) post.title = trimmedTitle;
     if (!post.content) post.content = trimmedContent;
+    if (encodedFiles.length && !(post.files || []).length) {
+      throw new Error(
+        "글은 등록됐지만 첨부파일이 저장되지 않았습니다. Apps Script에 최신 board-api.gs를 붙여넣고 setupDriveFolder() 실행 후 웹 앱을 '새 버전'으로 재배포해 주세요. (apiVersion 3 필요)"
+      );
+    }
     rememberBoardEditKey(post.id, trimmedKey);
     return post;
   }
@@ -419,13 +438,6 @@ export async function updateBoardPost({
   const fileError = validateBoardFiles(files);
   if (fileError) throw new Error(fileError);
 
-  const status = await fetchBoardApiStatus();
-  if (files?.length && status.outdated) {
-    throw new Error(
-      "첨부파일은 서버 스크립트 업데이트 후 사용할 수 있습니다. 최신 board-api.gs 재배포가 필요합니다."
-    );
-  }
-
   const encodedFiles = files?.length
     ? await Promise.all(Array.from(files).map(fileToBase64))
     : [];
@@ -451,6 +463,11 @@ export async function updateBoardPost({
     const post = normalizeBoardPost(result.post || {});
     if (!post.title) post.title = trimmedTitle;
     if (!post.content) post.content = trimmedContent;
+    if (encodedFiles.length && !(post.files || []).length) {
+      throw new Error(
+        "수정은 됐지만 첨부파일이 저장되지 않았습니다. Apps Script에서 setupDriveFolder() 실행 후 웹 앱을 '새 버전'으로 재배포해 주세요."
+      );
+    }
     return post;
   }
 

@@ -111,9 +111,11 @@ export default function PageBoard() {
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
   const fileInputRef = useRef(null);
+  const formRef = useRef(null);
 
   const [expandedId, setExpandedId] = useState(null);
   const [apiStatus, setApiStatus] = useState(null);
+  const [dismissApiBanner, setDismissApiBanner] = useState(false);
 
   const [showAdmin, setShowAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(isBoardAdminAuthenticated());
@@ -201,8 +203,11 @@ export default function PageBoard() {
     });
     if (fileInputRef.current) fileInputRef.current.value = "";
     setFormError("");
-    setFormSuccess("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setFormSuccess("수정할 내용을 바꾼 뒤 '수정 완료'를 눌러 주세요.");
+    // 페이지 맨 위 경고 배너가 아니라 글쓰기/수정 폼으로 이동
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -265,7 +270,14 @@ export default function PageBoard() {
       resetForm();
       await loadPosts();
     } catch (err) {
-      setFormError(err.message || (editingId ? "수정에 실패했습니다." : "등록에 실패했습니다."));
+      const msg = err.message || (editingId ? "수정에 실패했습니다." : "등록에 실패했습니다.");
+      if (/unknown action/i.test(msg)) {
+        setFormError(
+          "서버에 수정 기능이 없습니다. Apps Script에 최신 board-api.gs를 붙여넣고 웹 앱을 새 버전으로 재배포해 주세요."
+        );
+      } else {
+        setFormError(msg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -330,13 +342,30 @@ export default function PageBoard() {
               운영 배포 시 <code>VITE_BOARD_API_URL</code>을 설정해 주세요.
             </div>
           )}
-          {apiStatus?.outdated && (
+          {!dismissApiBanner && apiStatus?.configured && (apiStatus.apiVersion || 0) < BOARD_API_REQUIRED_VERSION && (
             <div className="survey-setup-notice" style={{ maxWidth: 820, margin: "0 auto 20px", borderColor: "#e65100" }}>
-              ⚠️ 서버 스크립트가 오래되어 제목·첨부가 제대로 저장되지 않을 수 있습니다.
-              Google Apps Script에 프로젝트의 <code>google-apps-script/board-api.gs</code> 전체를 붙여넣은 뒤
-              <strong> migrateBoardSheet()</strong>, <strong>setupDriveFolder()</strong>를 실행하고
-              웹 앱을 <strong>새 버전으로 재배포</strong>해 주세요.
-              (현재 apiVersion: {apiStatus.apiVersion || 0} / 필요: {BOARD_API_REQUIRED_VERSION})
+              ⚠️ 참고: 사진·동영상 첨부를 쓰려면 Apps Script 재배포가 필요합니다.
+              (글 수정·제목 작성은 계속 가능합니다)
+              <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="popup-dismiss"
+                  onClick={async () => {
+                    const status = await fetchBoardApiStatus();
+                    setApiStatus(status);
+                    alert(
+                      status.apiVersion >= BOARD_API_REQUIRED_VERSION
+                        ? `연결 정상 (apiVersion ${status.apiVersion}) — 첨부 사용 가능`
+                        : `아직 apiVersion ${status.apiVersion || 0} 입니다. board-api.gs 붙여넣기 → setupDriveFolder 실행 → 웹 앱 새 버전 배포가 필요합니다.`
+                    );
+                  }}
+                >
+                  서버 버전 확인
+                </button>
+                <button type="button" className="popup-dismiss" onClick={() => setDismissApiBanner(true)}>
+                  닫기
+                </button>
+              </div>
             </div>
           )}
 
@@ -346,7 +375,7 @@ export default function PageBoard() {
               <p>{GUIDE_TEXT}</p>
             </div>
 
-            <form className="board-form" onSubmit={handleSubmit}>
+            <form className="board-form" ref={formRef} onSubmit={handleSubmit}>
               <h3>{editingId ? "게시글 수정" : "글쓰기"}</h3>
               {editingId && (
                 <p className="board-edit-banner">
