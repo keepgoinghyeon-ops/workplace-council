@@ -3,6 +3,10 @@ const LOCAL_KEY = "wc-board-posts";
 const AUTH_KEY = "wc-board-admin-auth";
 const TOKEN_KEY = "wc-board-admin-token";
 
+const MAX_FILES = 5;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 12 * 1024 * 1024;
+
 function normalizeApiResult(result) {
   if (!result || typeof result !== "object") return { success: false, posts: [], error: "" };
   return {
@@ -54,6 +58,47 @@ export function setBoardAdminAuthenticated(value, token = "") {
     sessionStorage.removeItem(AUTH_KEY);
     sessionStorage.removeItem(TOKEN_KEY);
   }
+}
+
+export function isImageFile(file) {
+  const mime = file?.mimeType || file?.type || "";
+  return mime.startsWith("image/");
+}
+
+export function isVideoFile(file) {
+  const mime = file?.mimeType || file?.type || "";
+  return mime.startsWith("video/");
+}
+
+export function validateBoardFiles(files) {
+  const list = Array.from(files || []);
+  if (list.length > MAX_FILES) {
+    return `첨부파일은 최대 ${MAX_FILES}개까지 가능합니다.`;
+  }
+  for (const file of list) {
+    const mime = file.type || "";
+    if (!mime.startsWith("image/") && !mime.startsWith("video/")) {
+      return `"${file.name}"은(는) 사진 또는 동영상만 첨부할 수 있습니다.`;
+    }
+    const limit = mime.startsWith("video/") ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+    if (file.size > limit) {
+      const mb = Math.round(limit / (1024 * 1024));
+      return `"${file.name}" 용량이 너무 큽니다. ${mime.startsWith("video/") ? "동영상" : "사진"}은 ${mb}MB 이하만 가능합니다.`;
+    }
+  }
+  return "";
+}
+
+export async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = String(reader.result || "").split(",")[1] || "";
+      resolve({ name: file.name, mimeType: file.type, data: base64 });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 async function apiGet(params) {
@@ -118,8 +163,19 @@ export async function fetchBoardPosts(adminToken) {
   return all.filter((p) => !p.isPrivate);
 }
 
-export async function submitBoardPost({ office, content, isPrivate = false }) {
-  const payload = { action: "submit", office, content, isPrivate: Boolean(isPrivate) };
+export async function submitBoardPost({ office, title, content, isPrivate = false, files = [] }) {
+  const fileError = validateBoardFiles(files);
+  if (fileError) throw new Error(fileError);
+
+  const encodedFiles = await Promise.all(Array.from(files || []).map(fileToBase64));
+  const payload = {
+    action: "submit",
+    office,
+    title,
+    content,
+    isPrivate: Boolean(isPrivate),
+    files: encodedFiles,
+  };
 
   if (API_URL) {
     const result = await apiPost(payload);
@@ -130,8 +186,14 @@ export async function submitBoardPost({ office, content, isPrivate = false }) {
     id: crypto.randomUUID(),
     createdAt: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
     office: String(office).trim(),
+    title: String(title || "").trim(),
     content: String(content).trim(),
     isPrivate: Boolean(isPrivate),
+    files: encodedFiles.map((f) => ({
+      name: f.name,
+      url: `data:${f.mimeType};base64,${f.data}`,
+      mimeType: f.mimeType,
+    })),
   };
   writeLocalPosts([post, ...readLocalPosts()]);
   return post;
