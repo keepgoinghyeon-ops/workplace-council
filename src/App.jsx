@@ -79,7 +79,7 @@ export default function App() {
                 <div className="promo-popup-crop">
                   <img
                     src={`${import.meta.env.BASE_URL}coffee-can-event.png`}
-                    alt="커피캔 행사 - 직협이 있기에 우리가 더 빛납니다"
+                    alt="커피캔 행사 - 이거 마시면 직협 가입하는 거다"
                     className="promo-popup-image"
                   />
                 </div>
