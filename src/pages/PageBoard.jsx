@@ -80,6 +80,8 @@ export default function PageBoard() {
   const [formSuccess, setFormSuccess] = useState("");
   const fileInputRef = useRef(null);
 
+  const [expandedId, setExpandedId] = useState(null);
+
   const [showAdmin, setShowAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(isBoardAdminAuthenticated());
   const [adminToken, setAdminToken] = useState(getBoardAdminToken());
@@ -327,27 +329,73 @@ export default function PageBoard() {
                 <p className="notices-empty">아직 등록된 게시글이 없습니다. 첫 글을 남겨 보세요!</p>
               )}
               <div className="board-list">
-                {posts.map((post) => (
-                  <article key={post.id} className={`board-card ${post.isPrivate ? "board-card--private" : ""}`}>
-                    <div className="board-card-header">
-                      <span className="board-office-badge">{post.office}</span>
-                      {post.isPrivate && <span className="board-private-badge">비공개</span>}
-                      <time className="board-date">{post.createdAt}</time>
-                    </div>
-                    {post.title && <h4 className="board-card-title">{post.title}</h4>}
-                    <div className="board-card-content">{post.content}</div>
-                    <BoardMedia files={post.files} />
-                    {isAdmin && (
-                      <button
-                        type="button"
-                        className="notice-delete-btn"
-                        onClick={() => handleDelete(post.id)}
-                      >
-                        삭제
-                      </button>
-                    )}
-                  </article>
-                ))}
+                {posts.map((post) => {
+                  const expanded = expandedId === post.id;
+                  const titleText = post.title || "(제목 없음)";
+                  const hasFiles = (post.files || []).length > 0;
+
+                  // 공개글: 목록에 제목만 → 클릭 시 내용·첨부 표시
+                  if (!post.isPrivate) {
+                    return (
+                      <article key={post.id} className={`board-card ${expanded ? "board-card--open" : ""}`}>
+                        <div className="board-card-header">
+                          <span className="board-office-badge">{post.office}</span>
+                          <time className="board-date">{post.createdAt}</time>
+                        </div>
+                        <button
+                          type="button"
+                          className="board-card-title-btn"
+                          onClick={() => setExpandedId(expanded ? null : post.id)}
+                          aria-expanded={expanded}
+                        >
+                          <h4 className="board-card-title">{titleText}</h4>
+                          <span className="board-card-toggle">{expanded ? "▲ 접기" : "▼ 내용 보기"}</span>
+                        </button>
+                        {expanded && (
+                          <div className="board-card-body">
+                            <div className="board-card-content">{post.content}</div>
+                            <BoardMedia files={post.files} />
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                className="notice-delete-btn"
+                                onClick={() => handleDelete(post.id)}
+                              >
+                                삭제
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {!expanded && hasFiles && (
+                          <p className="board-attach-hint">첨부파일 있음</p>
+                        )}
+                      </article>
+                    );
+                  }
+
+                  // 비공개글(관리자): 제목·내용 바로 표시
+                  return (
+                    <article key={post.id} className="board-card board-card--private">
+                      <div className="board-card-header">
+                        <span className="board-office-badge">{post.office}</span>
+                        <span className="board-private-badge">비공개</span>
+                        <time className="board-date">{post.createdAt}</time>
+                      </div>
+                      <h4 className="board-card-title">{titleText}</h4>
+                      <div className="board-card-content">{post.content}</div>
+                      <BoardMedia files={post.files} />
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          className="notice-delete-btn"
+                          onClick={() => handleDelete(post.id)}
+                        >
+                          삭제
+                        </button>
+                      )}
+                    </article>
+                  );
+                })}
               </div>
             </div>
 
