@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   fetchBoardPosts,
   submitBoardPost,
+  updateBoardPost,
   deleteBoardPost,
   verifyBoardAdminToken,
   getBoardAdminToken,
@@ -11,6 +12,9 @@ import {
   validateBoardFiles,
   isImageFile,
   isVideoFile,
+  getVideoEmbedUrl,
+  getMediaOpenUrl,
+  getRememberedBoardEditKey,
 } from "../lib/boardApi";
 
 const GUIDE_TEXT =
@@ -19,14 +23,22 @@ const GUIDE_TEXT =
 const PRIVATE_NOTICE =
   "귀하가 작성한 글은 홈페이지내에서 비공개되나, 관리자는 확인가능하니 비속어, 근거없는 비방글은 삼가하여 주시기 바랍니다.";
 
-const EMPTY_FORM = { office: "", title: "", content: "", isPrivate: false, files: [] };
+const EMPTY_FORM = {
+  office: "",
+  title: "",
+  content: "",
+  isPrivate: false,
+  files: [],
+  editKey: "",
+};
 
 function BoardMedia({ files }) {
   const list = files || [];
   if (!list.length) return null;
 
   const images = list.filter(isImageFile);
-  const videos = list.filter(isVideoFile);
+  const videos = list.filter((f) => isVideoFile(f) && !isImageFile(f));
+  const others = list.filter((f) => !isImageFile(f) && !isVideoFile(f));
 
   return (
     <div className="board-media">
@@ -35,7 +47,7 @@ function BoardMedia({ files }) {
           {images.map((file, i) => (
             <a
               key={`img-${i}`}
-              href={file.driveUrl || file.url}
+              href={getMediaOpenUrl(file) || file.url}
               target="_blank"
               rel="noopener noreferrer"
               className="board-gallery-item"
@@ -45,25 +57,42 @@ function BoardMedia({ files }) {
           ))}
         </div>
       )}
-      {videos.map((file, i) => (
-        <div key={`vid-${i}`} className="board-video-wrap">
-          {String(file.url || "").includes("/preview") ? (
-            <iframe
-              src={file.url}
-              title={file.name || "첨부 동영상"}
-              className="board-video-frame"
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-            />
-          ) : (
-            <video className="board-video" src={file.url} controls preload="metadata">
-              <track kind="captions" />
-            </video>
-          )}
-          <a href={file.driveUrl || file.url} target="_blank" rel="noopener noreferrer" className="board-media-link">
-            🎬 {file.name || "동영상 보기"}
-          </a>
-        </div>
+      {videos.map((file, i) => {
+        const embed = getVideoEmbedUrl(file);
+        const openUrl = getMediaOpenUrl(file) || embed;
+        const isDrivePreview = /drive\.google\.com\/file\/d\/.+\/preview/i.test(embed);
+        return (
+          <div key={`vid-${i}`} className="board-video-wrap">
+            {isDrivePreview ? (
+              <iframe
+                src={embed}
+                title={file.name || "첨부 동영상"}
+                className="board-video-frame"
+                allow="autoplay; encrypted-media; fullscreen"
+                allowFullScreen
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            ) : (
+              <video className="board-video" src={embed || file.url} controls preload="metadata" playsInline>
+                <track kind="captions" />
+              </video>
+            )}
+            <a href={openUrl} target="_blank" rel="noopener noreferrer" className="board-media-link">
+              🎬 {file.name || "새 창에서 동영상 보기"}
+            </a>
+          </div>
+        );
+      })}
+      {others.map((file, i) => (
+        <a
+          key={`other-${i}`}
+          href={getMediaOpenUrl(file) || file.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="board-media-link"
+        >
+          📎 {file.name || "첨부파일"}
+        </a>
       ))}
     </div>
   );
@@ -75,6 +104,7 @@ export default function PageBoard() {
   const [error, setError] = useState("");
 
   const [form, setForm] = useState(EMPTY_FORM);
+  const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
@@ -110,6 +140,12 @@ export default function PageBoard() {
     loadPosts();
   }, [loadPosts]);
 
+  const resetForm = () => {
+    setForm({ ...EMPTY_FORM });
+    setEditingId(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const handleFilesChange = (e) => {
     const selected = Array.from(e.target.files || []);
     const err = validateBoardFiles(selected);
@@ -123,9 +159,32 @@ export default function PageBoard() {
     setForm((prev) => ({ ...prev, files: selected }));
   };
 
-  const clearFiles = () => {
-    setForm((prev) => ({ ...prev, files: [] }));
+  const startEdit = (post) => {
+    const remembered = getRememberedBoardEditKey(post.id);
+    let key = remembered;
+    if (!isAdmin && !key) {
+      key = window.prompt("게시글 수정용 비밀번호를 입력해 주세요.") || "";
+      if (!key.trim()) return;
+    } else if (!isAdmin && key) {
+      // remembered key available
+    } else if (isAdmin && !key) {
+      key = ""; // admin can update without edit key via admin token
+    }
+
+    setEditingId(post.id);
+    setExpandedId(post.id);
+    setForm({
+      office: post.office || "",
+      title: post.title || "",
+      content: post.content || "",
+      isPrivate: Boolean(post.isPrivate),
+      files: [],
+      editKey: key,
+    });
     if (fileInputRef.current) fileInputRef.current.value = "";
+    setFormError("");
+    setFormSuccess("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleSubmit = async (e) => {
@@ -145,6 +204,10 @@ export default function PageBoard() {
       setFormError("내용을 입력해 주세요.");
       return;
     }
+    if (!editingId && form.editKey.trim().length < 4) {
+      setFormError("수정용 비밀번호를 4자 이상 입력해 주세요.");
+      return;
+    }
     const fileErr = validateBoardFiles(form.files);
     if (fileErr) {
       setFormError(fileErr);
@@ -154,23 +217,37 @@ export default function PageBoard() {
     const wasPrivate = form.isPrivate;
     setSubmitting(true);
     try {
-      await submitBoardPost({
-        office: form.office.trim(),
-        title: form.title.trim(),
-        content: form.content.trim(),
-        isPrivate: wasPrivate,
-        files: form.files,
-      });
-      setForm({ ...EMPTY_FORM });
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      setFormSuccess(
-        wasPrivate
-          ? "비공개 게시글이 등록되었습니다. 홈페이지 목록에는 표시되지 않습니다."
-          : "게시글이 등록되었습니다. 감사합니다!"
-      );
+      if (editingId) {
+        await updateBoardPost({
+          id: editingId,
+          office: form.office.trim(),
+          title: form.title.trim(),
+          content: form.content.trim(),
+          isPrivate: wasPrivate,
+          files: form.files,
+          editKey: form.editKey,
+          adminToken: isAdmin ? adminToken || getBoardAdminToken() : "",
+        });
+        setFormSuccess("게시글이 수정되었습니다.");
+      } else {
+        await submitBoardPost({
+          office: form.office.trim(),
+          title: form.title.trim(),
+          content: form.content.trim(),
+          isPrivate: wasPrivate,
+          files: form.files,
+          editKey: form.editKey.trim(),
+        });
+        setFormSuccess(
+          wasPrivate
+            ? "비공개 게시글이 등록되었습니다. 홈페이지 목록에는 표시되지 않습니다."
+            : "게시글이 등록되었습니다. 감사합니다!"
+        );
+      }
+      resetForm();
       await loadPosts();
     } catch (err) {
-      setFormError(err.message || "등록에 실패했습니다.");
+      setFormError(err.message || (editingId ? "수정에 실패했습니다." : "등록에 실패했습니다."));
     } finally {
       setSubmitting(false);
     }
@@ -202,7 +279,17 @@ export default function PageBoard() {
   const handleDelete = async (id) => {
     if (!window.confirm("이 게시글을 삭제하시겠습니까?")) return;
     try {
-      await deleteBoardPost(id, adminToken || getBoardAdminToken());
+      let editKey = getRememberedBoardEditKey(id);
+      if (!isAdmin && !editKey) {
+        editKey = window.prompt("삭제하려면 수정용 비밀번호를 입력해 주세요.") || "";
+        if (!editKey.trim()) return;
+      }
+      await deleteBoardPost(
+        id,
+        isAdmin ? adminToken || getBoardAdminToken() : "",
+        editKey
+      );
+      if (editingId === id) resetForm();
       await loadPosts();
     } catch (err) {
       alert(err.message);
@@ -233,7 +320,15 @@ export default function PageBoard() {
             </div>
 
             <form className="board-form" onSubmit={handleSubmit}>
-              <h3>글쓰기</h3>
+              <h3>{editingId ? "게시글 수정" : "글쓰기"}</h3>
+              {editingId && (
+                <p className="board-edit-banner">
+                  수정 중입니다.{" "}
+                  <button type="button" className="popup-dismiss" onClick={resetForm}>
+                    수정 취소
+                  </button>
+                </p>
+              )}
               <div className="form-group">
                 <label className="form-label" htmlFor="board-office">
                   지청명 <span className="req">*</span>
@@ -258,6 +353,7 @@ export default function PageBoard() {
                   onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
                   placeholder="게시글 제목을 입력해 주세요"
                   maxLength={100}
+                  required
                 />
               </div>
               <div className="form-group">
@@ -275,7 +371,7 @@ export default function PageBoard() {
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="board-files">
-                  사진·동영상 첨부
+                  사진·동영상 첨부 {editingId ? "(선택 시 기존 첨부 교체)" : ""}
                 </label>
                 <input
                   id="board-files"
@@ -292,12 +388,53 @@ export default function PageBoard() {
                 {form.files.length > 0 && (
                   <div className="board-file-selected">
                     <span>선택됨: {form.files.map((f) => f.name).join(", ")}</span>
-                    <button type="button" className="popup-dismiss" onClick={clearFiles}>
+                    <button
+                      type="button"
+                      className="popup-dismiss"
+                      onClick={() => {
+                        setForm((prev) => ({ ...prev, files: [] }));
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                    >
                       첨부 취소
                     </button>
                   </div>
                 )}
               </div>
+              {!editingId && (
+                <div className="form-group">
+                  <label className="form-label" htmlFor="board-edit-key">
+                    수정용 비밀번호 <span className="req">*</span>
+                  </label>
+                  <input
+                    id="board-edit-key"
+                    type="password"
+                    className="form-input"
+                    value={form.editKey}
+                    onChange={(e) => setForm((prev) => ({ ...prev, editKey: e.target.value }))}
+                    placeholder="나중에 수정할 때 사용할 비밀번호 (4자 이상)"
+                    minLength={4}
+                    autoComplete="new-password"
+                  />
+                  <p className="board-file-hint">작성자만 글을 수정·삭제할 수 있도록 비밀번호를 설정해 주세요.</p>
+                </div>
+              )}
+              {editingId && !isAdmin && (
+                <div className="form-group">
+                  <label className="form-label" htmlFor="board-edit-key-edit">
+                    수정용 비밀번호 <span className="req">*</span>
+                  </label>
+                  <input
+                    id="board-edit-key-edit"
+                    type="password"
+                    className="form-input"
+                    value={form.editKey}
+                    onChange={(e) => setForm((prev) => ({ ...prev, editKey: e.target.value }))}
+                    placeholder="등록 시 설정한 수정용 비밀번호"
+                    autoComplete="current-password"
+                  />
+                </div>
+              )}
               <div className="form-group board-private-group">
                 <label className="board-private-option">
                   <input
@@ -314,7 +451,7 @@ export default function PageBoard() {
               {formError && <p className="survey-error">{formError}</p>}
               {formSuccess && <p className="board-success">{formSuccess}</p>}
               <button type="submit" className="btn btn-primary btn-full" disabled={submitting}>
-                {submitting ? "등록 중..." : "게시글 등록"}
+                {submitting ? (editingId ? "수정 중..." : "등록 중...") : editingId ? "수정 완료" : "게시글 등록"}
               </button>
             </form>
 
@@ -331,10 +468,10 @@ export default function PageBoard() {
               <div className="board-list">
                 {posts.map((post) => {
                   const expanded = expandedId === post.id;
-                  const titleText = post.title || "(제목 없음)";
+                  const titleText = post.title?.trim() || "(제목 없음)";
                   const hasFiles = (post.files || []).length > 0;
+                  const canAuthorEdit = Boolean(getRememberedBoardEditKey(post.id)) || post.hasEditKey;
 
-                  // 공개글: 목록에 제목만 → 클릭 시 내용·첨부 표시
                   if (!post.isPrivate) {
                     return (
                       <article key={post.id} className={`board-card ${expanded ? "board-card--open" : ""}`}>
@@ -355,15 +492,18 @@ export default function PageBoard() {
                           <div className="board-card-body">
                             <div className="board-card-content">{post.content}</div>
                             <BoardMedia files={post.files} />
-                            {isAdmin && (
-                              <button
-                                type="button"
-                                className="notice-delete-btn"
-                                onClick={() => handleDelete(post.id)}
-                              >
-                                삭제
-                              </button>
-                            )}
+                            <div className="board-card-actions">
+                              {(canAuthorEdit || isAdmin) && (
+                                <button type="button" className="btn btn-outline board-action-btn" onClick={() => startEdit(post)}>
+                                  수정
+                                </button>
+                              )}
+                              {(canAuthorEdit || isAdmin) && (
+                                <button type="button" className="notice-delete-btn" onClick={() => handleDelete(post.id)}>
+                                  삭제
+                                </button>
+                              )}
+                            </div>
                           </div>
                         )}
                         {!expanded && hasFiles && (
@@ -373,7 +513,6 @@ export default function PageBoard() {
                     );
                   }
 
-                  // 비공개글(관리자): 제목·내용 바로 표시
                   return (
                     <article key={post.id} className="board-card board-card--private">
                       <div className="board-card-header">
@@ -384,15 +523,18 @@ export default function PageBoard() {
                       <h4 className="board-card-title">{titleText}</h4>
                       <div className="board-card-content">{post.content}</div>
                       <BoardMedia files={post.files} />
-                      {isAdmin && (
-                        <button
-                          type="button"
-                          className="notice-delete-btn"
-                          onClick={() => handleDelete(post.id)}
-                        >
-                          삭제
-                        </button>
-                      )}
+                      <div className="board-card-actions">
+                        {(canAuthorEdit || isAdmin) && (
+                          <button type="button" className="btn btn-outline board-action-btn" onClick={() => startEdit(post)}>
+                            수정
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <button type="button" className="notice-delete-btn" onClick={() => handleDelete(post.id)}>
+                            삭제
+                          </button>
+                        )}
+                      </div>
                     </article>
                   );
                 })}

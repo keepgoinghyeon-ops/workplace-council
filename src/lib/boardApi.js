@@ -2,10 +2,14 @@ const API_URL = import.meta.env.VITE_BOARD_API_URL?.trim();
 const LOCAL_KEY = "wc-board-posts";
 const AUTH_KEY = "wc-board-admin-auth";
 const TOKEN_KEY = "wc-board-admin-token";
+const EDIT_KEYS_KEY = "wc-board-edit-keys";
 
 const MAX_FILES = 5;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 12 * 1024 * 1024;
+
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|svg)$/i;
+const VIDEO_EXT = /\.(mp4|webm|mov|m4v|avi|mkv|ogg|ogv)$/i;
 
 function normalizeApiResult(result) {
   if (!result || typeof result !== "object") return { success: false, posts: [], error: "" };
@@ -38,6 +42,47 @@ function writeLocalPosts(posts) {
   localStorage.setItem(LOCAL_KEY, JSON.stringify(posts));
 }
 
+function readEditKeys() {
+  try {
+    return JSON.parse(localStorage.getItem(EDIT_KEYS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+export function rememberBoardEditKey(postId, editKey) {
+  if (!postId || !editKey) return;
+  const keys = readEditKeys();
+  keys[postId] = String(editKey);
+  localStorage.setItem(EDIT_KEYS_KEY, JSON.stringify(keys));
+}
+
+export function getRememberedBoardEditKey(postId) {
+  return readEditKeys()[postId] || "";
+}
+
+export function normalizeBoardPost(raw = {}) {
+  const files = (raw.files || raw.첨부 || raw.첨부파일 || []).map((f) => ({
+    ...f,
+    name: f.name || f.파일명 || "",
+    mimeType: f.mimeType || f.type || "",
+    url: f.url || f.link || "",
+    driveUrl: f.driveUrl || f.drive || "",
+    id: f.id || "",
+  }));
+
+  return {
+    id: String(raw.id || ""),
+    createdAt: String(raw.createdAt || raw.작성일시 || ""),
+    office: String(raw.office || raw.지청명 || ""),
+    title: String(raw.title || raw.제목 || "").trim(),
+    content: String(raw.content || raw.내용 || ""),
+    isPrivate: Boolean(raw.isPrivate ?? raw.비공개),
+    files,
+    hasEditKey: Boolean(raw.hasEditKey ?? raw.수정키),
+  };
+}
+
 export function isBoardApiConfigured() {
   return Boolean(API_URL);
 }
@@ -61,13 +106,41 @@ export function setBoardAdminAuthenticated(value, token = "") {
 }
 
 export function isImageFile(file) {
-  const mime = file?.mimeType || file?.type || "";
-  return mime.startsWith("image/");
+  const mime = (file?.mimeType || file?.type || "").toLowerCase();
+  if (mime.startsWith("image/")) return true;
+  const name = file?.name || "";
+  if (IMAGE_EXT.test(name)) return true;
+  const url = file?.url || "";
+  if (/uc\?export=view/i.test(url) && !/\/preview/i.test(url)) return true;
+  return false;
 }
 
 export function isVideoFile(file) {
-  const mime = file?.mimeType || file?.type || "";
-  return mime.startsWith("video/");
+  const mime = (file?.mimeType || file?.type || "").toLowerCase();
+  if (mime.startsWith("video/")) return true;
+  const name = file?.name || "";
+  if (VIDEO_EXT.test(name)) return true;
+  const url = file?.url || "";
+  if (/\/preview/i.test(url) || /\/file\/d\//i.test(url)) {
+    // Drive preview/file links that aren't clearly images
+    if (!isImageFile(file)) return true;
+  }
+  return false;
+}
+
+export function getVideoEmbedUrl(file) {
+  if (!file) return "";
+  if (file.id) return `https://drive.google.com/file/d/${file.id}/preview`;
+  const url = String(file.url || "");
+  if (url.includes("/preview")) return url;
+  const match = url.match(/\/file\/d\/([^/]+)/) || String(file.driveUrl || "").match(/\/file\/d\/([^/]+)/);
+  if (match?.[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
+  return url;
+}
+
+export function getMediaOpenUrl(file) {
+  if (!file) return "";
+  return file.driveUrl || (file.id ? `https://drive.google.com/file/d/${file.id}/view` : file.url) || "";
 }
 
 export function validateBoardFiles(files) {
@@ -77,13 +150,15 @@ export function validateBoardFiles(files) {
   }
   for (const file of list) {
     const mime = file.type || "";
-    if (!mime.startsWith("image/") && !mime.startsWith("video/")) {
+    const isImage = mime.startsWith("image/") || IMAGE_EXT.test(file.name || "");
+    const isVideo = mime.startsWith("video/") || VIDEO_EXT.test(file.name || "");
+    if (!isImage && !isVideo) {
       return `"${file.name}"은(는) 사진 또는 동영상만 첨부할 수 있습니다.`;
     }
-    const limit = mime.startsWith("video/") ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+    const limit = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
     if (file.size > limit) {
       const mb = Math.round(limit / (1024 * 1024));
-      return `"${file.name}" 용량이 너무 큽니다. ${mime.startsWith("video/") ? "동영상" : "사진"}은 ${mb}MB 이하만 가능합니다.`;
+      return `"${file.name}" 용량이 너무 큽니다. ${isVideo ? "동영상" : "사진"}은 ${mb}MB 이하만 가능합니다.`;
     }
   }
   return "";
@@ -155,15 +230,27 @@ export async function fetchBoardPosts(adminToken) {
 
   if (API_URL) {
     const result = await apiGet(params);
-    return result.posts || [];
+    return (result.posts || []).map(normalizeBoardPost);
   }
 
-  const all = readLocalPosts();
+  const all = readLocalPosts().map(normalizeBoardPost);
   if (token) return all;
   return all.filter((p) => !p.isPrivate);
 }
 
-export async function submitBoardPost({ office, title, content, isPrivate = false, files = [] }) {
+export async function submitBoardPost({
+  office,
+  title,
+  content,
+  isPrivate = false,
+  files = [],
+  editKey = "",
+}) {
+  const trimmedTitle = String(title || "").trim();
+  const trimmedKey = String(editKey || "").trim();
+  if (!trimmedTitle) throw new Error("제목을 입력해 주세요.");
+  if (trimmedKey.length < 4) throw new Error("수정용 비밀번호를 4자 이상 입력해 주세요.");
+
   const fileError = validateBoardFiles(files);
   if (fileError) throw new Error(fileError);
 
@@ -171,22 +258,25 @@ export async function submitBoardPost({ office, title, content, isPrivate = fals
   const payload = {
     action: "submit",
     office,
-    title,
+    title: trimmedTitle,
     content,
     isPrivate: Boolean(isPrivate),
     files: encodedFiles,
+    editKey: trimmedKey,
   };
 
   if (API_URL) {
     const result = await apiPost(payload);
-    return result.post;
+    const post = normalizeBoardPost(result.post || {});
+    rememberBoardEditKey(post.id, trimmedKey);
+    return post;
   }
 
-  const post = {
+  const post = normalizeBoardPost({
     id: crypto.randomUUID(),
     createdAt: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
     office: String(office).trim(),
-    title: String(title || "").trim(),
+    title: trimmedTitle,
     content: String(content).trim(),
     isPrivate: Boolean(isPrivate),
     files: encodedFiles.map((f) => ({
@@ -194,9 +284,87 @@ export async function submitBoardPost({ office, title, content, isPrivate = fals
       url: `data:${f.mimeType};base64,${f.data}`,
       mimeType: f.mimeType,
     })),
-  };
-  writeLocalPosts([post, ...readLocalPosts()]);
+    hasEditKey: true,
+    editKey: trimmedKey,
+  });
+  // keep editKey only in local storage map + local post for verification
+  const stored = { ...post, editKey: trimmedKey };
+  writeLocalPosts([stored, ...readLocalPosts()]);
+  rememberBoardEditKey(post.id, trimmedKey);
   return post;
+}
+
+export async function updateBoardPost({
+  id,
+  office,
+  title,
+  content,
+  isPrivate = false,
+  files = [],
+  clearFiles = false,
+  editKey = "",
+  adminToken = "",
+}) {
+  const trimmedTitle = String(title || "").trim();
+  if (!id) throw new Error("게시글 ID가 없습니다.");
+  if (!trimmedTitle) throw new Error("제목을 입력해 주세요.");
+
+  const fileError = validateBoardFiles(files);
+  if (fileError) throw new Error(fileError);
+
+  const encodedFiles = files?.length
+    ? await Promise.all(Array.from(files).map(fileToBase64))
+    : [];
+
+  const key = String(editKey || getRememberedBoardEditKey(id) || "").trim();
+  const token = adminToken || (isBoardAdminAuthenticated() ? getBoardAdminToken() : "");
+
+  if (API_URL) {
+    const result = await apiPost({
+      action: "update",
+      id,
+      office,
+      title: trimmedTitle,
+      content,
+      isPrivate: Boolean(isPrivate),
+      files: encodedFiles,
+      clearFiles: Boolean(clearFiles),
+      editKey: key,
+      adminToken: token,
+    });
+    if (key) rememberBoardEditKey(id, key);
+    return normalizeBoardPost(result.post || {});
+  }
+
+  const posts = readLocalPosts();
+  const idx = posts.findIndex((p) => p.id === id);
+  if (idx < 0) throw new Error("게시글을 찾을 수 없습니다.");
+  const existing = posts[idx];
+  const ok = token || (key && key === String(existing.editKey || getRememberedBoardEditKey(id)));
+  if (!ok) throw new Error("수정 권한이 없습니다. 수정용 비밀번호를 확인해 주세요.");
+
+  const nextFiles = encodedFiles.length
+    ? encodedFiles.map((f) => ({
+        name: f.name,
+        url: `data:${f.mimeType};base64,${f.data}`,
+        mimeType: f.mimeType,
+      }))
+    : clearFiles
+      ? []
+      : existing.files || [];
+
+  const updated = {
+    ...existing,
+    office: String(office).trim(),
+    title: trimmedTitle,
+    content: String(content).trim(),
+    isPrivate: Boolean(isPrivate),
+    files: nextFiles,
+  };
+  posts[idx] = updated;
+  writeLocalPosts(posts);
+  if (key) rememberBoardEditKey(id, key);
+  return normalizeBoardPost(updated);
 }
 
 export async function verifyBoardAdminToken(token) {
@@ -224,10 +392,24 @@ export async function verifyBoardAdminToken(token) {
   return { ok: false, error: "비밀번호가 올바르지 않습니다." };
 }
 
-export async function deleteBoardPost(id, adminToken) {
+export async function deleteBoardPost(id, adminToken, editKey = "") {
+  const key = String(editKey || getRememberedBoardEditKey(id) || "").trim();
+  const token = adminToken || (isBoardAdminAuthenticated() ? getBoardAdminToken() : "");
+
   if (API_URL) {
-    await apiPost({ action: "delete", adminToken: adminToken || getBoardAdminToken(), id });
+    await apiPost({
+      action: "delete",
+      adminToken: token,
+      editKey: key,
+      id,
+    });
     return;
   }
-  writeLocalPosts(readLocalPosts().filter((p) => p.id !== id));
+
+  const posts = readLocalPosts();
+  const existing = posts.find((p) => p.id === id);
+  if (!existing) return;
+  const ok = token || (key && key === String(existing.editKey || ""));
+  if (!ok) throw new Error("삭제 권한이 없습니다.");
+  writeLocalPosts(posts.filter((p) => p.id !== id));
 }
