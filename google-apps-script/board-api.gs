@@ -12,6 +12,38 @@
 var BOARD_SHEET = "자유게시판";
 var DRIVE_FOLDER_NAME = "직협_자유게시판_첨부파일";
 var HEADERS = ["ID", "작성일시", "지청명", "제목", "내용", "비공개", "첨부파일JSON", "수정키"];
+/** 프론트 BOARD_API_REQUIRED_VERSION 과 동일해야 합니다. */
+var API_VERSION = 3;
+var TITLE_MARK = "【제목】";
+var BODY_MARK = "\n\n【본문】\n";
+
+function decodeBoardBody_(raw) {
+  var text = String(raw || "");
+  if (text.indexOf(TITLE_MARK) !== 0) {
+    return { title: "", content: text };
+  }
+  var rest = text.substring(TITLE_MARK.length);
+  var idx = rest.indexOf(BODY_MARK);
+  if (idx < 0) return { title: rest.replace(/^\s+|\s+$/g, ""), content: "" };
+  return {
+    title: rest.substring(0, idx).replace(/^\s+|\s+$/g, ""),
+    content: rest.substring(idx + BODY_MARK.length),
+  };
+}
+
+function resolveTitleContent_(data) {
+  var title = String(data.title || data.제목 || "").replace(/^\s+|\s+$/g, "");
+  var content = String(data.content || data.내용 || "");
+  var decoded = decodeBoardBody_(content);
+  if (decoded.title) {
+    if (!title) title = decoded.title;
+    content = decoded.content;
+  }
+  return {
+    title: title,
+    content: String(content).replace(/^\s+|\s+$/g, ""),
+  };
+}
 
 function setupBoardSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -254,15 +286,23 @@ function getPosts_(includePrivate) {
       return normalizeSavedFile_(f);
     });
 
+    var title = String(row[map["제목"]] || "");
+    var content = String(row[map["내용"]] || "");
+    var decoded = decodeBoardBody_(content);
+    if (decoded.title) {
+      if (!String(title).replace(/^\s+|\s+$/g, "")) title = decoded.title;
+      content = decoded.content;
+    }
+
     list.push({
       id: String(row[map["ID"]]),
       createdAt: String(row[map["작성일시"]]),
       office: String(row[map["지청명"]] || ""),
-      title: String(row[map["제목"]] || ""),
-      content: String(row[map["내용"]] || ""),
+      title: String(title || "").replace(/^\s+|\s+$/g, ""),
+      content: content,
       isPrivate: isPrivate,
       files: files,
-      hasEditKey: Boolean(String(row[map["수정키"]] || "").trim()),
+      hasEditKey: Boolean(String(row[map["수정키"]] || "").replace(/^\s+|\s+$/g, "")),
     });
   }
 
@@ -292,40 +332,50 @@ function getEditKeyById_(sheet, id) {
 }
 
 function createPost_(data) {
-  var office = data.office || "";
-  var title = data.title || "";
-  var content = data.content || "";
-  var editKey = String(data.editKey || data.editPassword || "").trim();
+  var office = String(data.office || "").replace(/^\s+|\s+$/g, "");
+  var resolved = resolveTitleContent_(data);
+  var title = resolved.title;
+  var content = resolved.content;
+  var editKey = String(data.editKey || data.editPassword || "").replace(/^\s+|\s+$/g, "");
 
-  if (!String(office).trim()) {
-    return { success: false, error: "지청명을 입력해 주세요." };
+  if (!office) {
+    return { success: false, error: "지청명을 입력해 주세요.", apiVersion: API_VERSION };
   }
-  if (!String(title).trim()) {
-    return { success: false, error: "제목을 입력해 주세요." };
+  if (!title) {
+    return { success: false, error: "제목을 입력해 주세요.", apiVersion: API_VERSION };
   }
-  if (!String(content).trim()) {
-    return { success: false, error: "내용을 입력해 주세요." };
+  if (!content) {
+    return { success: false, error: "내용을 입력해 주세요.", apiVersion: API_VERSION };
   }
   if (editKey.length < 4) {
-    return { success: false, error: "수정용 비밀번호를 4자 이상 입력해 주세요." };
+    return { success: false, error: "수정용 비밀번호를 4자 이상 입력해 주세요.", apiVersion: API_VERSION };
   }
 
   var filesInput = data.files || [];
   if (filesInput.length > 5) {
-    return { success: false, error: "첨부파일은 최대 5개까지 가능합니다." };
+    return { success: false, error: "첨부파일은 최대 5개까지 가능합니다.", apiVersion: API_VERSION };
   }
 
   var id = Utilities.getUuid();
   var now = new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
   var isPrivate = parsePrivateFlag_(data.isPrivate);
-  var files = saveFiles_(filesInput);
+  var files = [];
+  try {
+    files = saveFiles_(filesInput);
+  } catch (fileErr) {
+    return {
+      success: false,
+      error: "첨부파일 저장에 실패했습니다. setupDriveFolder() 실행과 Drive 권한을 확인해 주세요. (" + String(fileErr) + ")",
+      apiVersion: API_VERSION,
+    };
+  }
 
   getBoardSheet_().appendRow([
     id,
     now,
-    String(office).trim(),
-    String(title).trim(),
-    String(content).trim(),
+    office,
+    title,
+    content,
     isPrivate ? "Y" : "",
     JSON.stringify(files),
     editKey,
@@ -333,12 +383,13 @@ function createPost_(data) {
 
   return {
     success: true,
+    apiVersion: API_VERSION,
     post: {
       id: id,
       createdAt: now,
-      office: String(office).trim(),
-      title: String(title).trim(),
-      content: String(content).trim(),
+      office: office,
+      title: title,
+      content: content,
       isPrivate: isPrivate,
       files: files,
       hasEditKey: true,
@@ -369,9 +420,14 @@ function updatePost_(data) {
   var map = headerIndexMap_(dataRange[0].map(String));
   var row = dataRange[rowIndex - 1];
 
-  var office = data.office !== undefined ? String(data.office).trim() : String(row[map["지청명"]] || "");
-  var title = data.title !== undefined ? String(data.title).trim() : String(row[map["제목"]] || "");
-  var content = data.content !== undefined ? String(data.content).trim() : String(row[map["내용"]] || "");
+  var office = data.office !== undefined ? String(data.office).replace(/^\s+|\s+$/g, "") : String(row[map["지청명"]] || "");
+  var title = data.title !== undefined ? String(data.title).replace(/^\s+|\s+$/g, "") : String(row[map["제목"]] || "");
+  var content = data.content !== undefined ? String(data.content) : String(row[map["내용"]] || "");
+  if (data.title !== undefined || data.content !== undefined) {
+    var resolvedUp = resolveTitleContent_({ title: title, content: content });
+    title = resolvedUp.title;
+    content = resolvedUp.content;
+  }
   var isPrivate = data.isPrivate !== undefined ? parsePrivateFlag_(data.isPrivate) : parsePrivateFlag_(row[map["비공개"]]);
   var files = parseFiles_(row[map["첨부파일JSON"]]).map(normalizeSavedFile_);
   var editKey = String(row[map["수정키"]] || "");
@@ -430,16 +486,29 @@ function doGet(e) {
   try {
     var action = (e && e.parameter && e.parameter.action) || "list";
     if (action === "status") {
-      return jsonResponse({ success: true, service: "board-api", status: "ok" });
+      return jsonResponse({
+        success: true,
+        service: "board-api",
+        status: "ok",
+        apiVersion: API_VERSION,
+      });
     }
     if (action === "list") {
       var adminToken = (e.parameter && e.parameter.adminToken) || "";
       var includePrivate = isAuthorized_(adminToken);
-      return jsonResponse({ success: true, posts: getPosts_(includePrivate) });
+      return jsonResponse({
+        success: true,
+        apiVersion: API_VERSION,
+        posts: getPosts_(includePrivate),
+      });
     }
     if (action === "auth") {
       var auth = checkAuth_((e.parameter && e.parameter.adminToken) || "");
-      return jsonResponse({ success: auth.ok, error: auth.error || "" });
+      return jsonResponse({
+        success: auth.ok,
+        error: auth.error || "",
+        apiVersion: API_VERSION,
+      });
     }
     return jsonResponse({ success: false, error: "unknown action" });
   } catch (err) {

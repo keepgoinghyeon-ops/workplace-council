@@ -4,6 +4,9 @@ const AUTH_KEY = "wc-board-admin-auth";
 const TOKEN_KEY = "wc-board-admin-token";
 const EDIT_KEYS_KEY = "wc-board-edit-keys";
 
+/** 서버 board-api.gs 의 API_VERSION 과 맞춰야 제목·첨부가 정상 동작합니다. */
+export const BOARD_API_REQUIRED_VERSION = 3;
+
 const MAX_FILES = 5;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 12 * 1024 * 1024;
@@ -11,13 +14,41 @@ const MAX_VIDEO_BYTES = 12 * 1024 * 1024;
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|svg)$/i;
 const VIDEO_EXT = /\.(mp4|webm|mov|m4v|avi|mkv|ogg|ogv)$/i;
 
+const TITLE_MARK = "【제목】";
+const BODY_MARK = "\n\n【본문】\n";
+
+/** 구버전 Apps Script(제목 열 없음)에서도 제목이 보이도록 본문에 제목을 함께 넣습니다. */
+export function encodeBoardBody(title, content) {
+  const t = String(title || "").trim();
+  const c = String(content || "").trim();
+  if (!t) return c;
+  return `${TITLE_MARK}${t}${BODY_MARK}${c}`;
+}
+
+export function decodeBoardBody(raw) {
+  const text = String(raw || "");
+  if (!text.startsWith(TITLE_MARK)) {
+    return { title: "", content: text };
+  }
+  const rest = text.slice(TITLE_MARK.length);
+  const idx = rest.indexOf(BODY_MARK);
+  if (idx < 0) {
+    return { title: rest.trim(), content: "" };
+  }
+  return {
+    title: rest.slice(0, idx).trim(),
+    content: rest.slice(idx + BODY_MARK.length),
+  };
+}
+
 function normalizeApiResult(result) {
-  if (!result || typeof result !== "object") return { success: false, posts: [], error: "" };
+  if (!result || typeof result !== "object") return { success: false, posts: [], error: "", apiVersion: 0 };
   return {
     success: Boolean(result.success ?? result.성공),
     posts: result.posts ?? result.목록 ?? [],
     post: result.post ?? result.게시글,
     error: result.error ?? result.오류 ?? result.에러 ?? "",
+    apiVersion: Number(result.apiVersion ?? result.version ?? 0) || 0,
   };
 }
 
@@ -71,12 +102,20 @@ export function normalizeBoardPost(raw = {}) {
     id: f.id || "",
   }));
 
+  let title = String(raw.title || raw.제목 || "").trim();
+  let content = String(raw.content || raw.내용 || "");
+  const decoded = decodeBoardBody(content);
+  if (decoded.title) {
+    if (!title) title = decoded.title;
+    content = decoded.content;
+  }
+
   return {
     id: String(raw.id || ""),
     createdAt: String(raw.createdAt || raw.작성일시 || ""),
     office: String(raw.office || raw.지청명 || ""),
-    title: String(raw.title || raw.제목 || "").trim(),
-    content: String(raw.content || raw.내용 || ""),
+    title,
+    content,
     isPrivate: Boolean(raw.isPrivate ?? raw.비공개),
     files,
     hasEditKey: Boolean(raw.hasEditKey ?? raw.수정키),
@@ -122,7 +161,6 @@ export function isVideoFile(file) {
   if (VIDEO_EXT.test(name)) return true;
   const url = file?.url || "";
   if (/\/preview/i.test(url) || /\/file\/d\//i.test(url)) {
-    // Drive preview/file links that aren't clearly images
     if (!isImageFile(file)) return true;
   }
   return false;
@@ -223,6 +261,24 @@ async function apiPost(payload) {
   return normalized;
 }
 
+export async function fetchBoardApiStatus() {
+  if (!API_URL) {
+    return { configured: false, apiVersion: BOARD_API_REQUIRED_VERSION, supportsMedia: true };
+  }
+  try {
+    const result = await apiGet({ action: "status" });
+    const apiVersion = result.apiVersion || 0;
+    return {
+      configured: true,
+      apiVersion,
+      supportsMedia: apiVersion >= BOARD_API_REQUIRED_VERSION,
+      outdated: apiVersion < BOARD_API_REQUIRED_VERSION,
+    };
+  } catch {
+    return { configured: true, apiVersion: 0, supportsMedia: false, outdated: true };
+  }
+}
+
 export async function fetchBoardPosts(adminToken) {
   const params = { action: "list" };
   const token = adminToken || (isBoardAdminAuthenticated() ? getBoardAdminToken() : "");
@@ -247,19 +303,31 @@ export async function submitBoardPost({
   editKey = "",
 }) {
   const trimmedTitle = String(title || "").trim();
+  const trimmedContent = String(content || "").trim();
   const trimmedKey = String(editKey || "").trim();
   if (!trimmedTitle) throw new Error("제목을 입력해 주세요.");
+  if (!trimmedContent) throw new Error("내용을 입력해 주세요.");
   if (trimmedKey.length < 4) throw new Error("수정용 비밀번호를 4자 이상 입력해 주세요.");
 
   const fileError = validateBoardFiles(files);
   if (fileError) throw new Error(fileError);
 
+  const status = await fetchBoardApiStatus();
+  if (files?.length && status.outdated) {
+    throw new Error(
+      "첨부파일은 서버 스크립트 업데이트 후 사용할 수 있습니다. Google Apps Script에 최신 board-api.gs를 붙여넣고 migrateBoardSheet()·setupDriveFolder() 실행 후 웹 앱을 새 버전으로 재배포해 주세요."
+    );
+  }
+
   const encodedFiles = await Promise.all(Array.from(files || []).map(fileToBase64));
+  // 구버전 서버는 title 필드를 무시하므로, 본문에 제목을 함께 넣어 호환합니다.
+  const packedContent = encodeBoardBody(trimmedTitle, trimmedContent);
+
   const payload = {
     action: "submit",
     office,
     title: trimmedTitle,
-    content,
+    content: packedContent,
     isPrivate: Boolean(isPrivate),
     files: encodedFiles,
     editKey: trimmedKey,
@@ -267,7 +335,16 @@ export async function submitBoardPost({
 
   if (API_URL) {
     const result = await apiPost(payload);
-    const post = normalizeBoardPost(result.post || {});
+    const post = normalizeBoardPost(result.post || {
+      office,
+      title: trimmedTitle,
+      content: packedContent,
+      isPrivate,
+      files: [],
+    });
+    // 서버가 제목을 완전히 누락한 경우(아주 옛 스크립트) 클라이언트가 보정
+    if (!post.title) post.title = trimmedTitle;
+    if (!post.content) post.content = trimmedContent;
     rememberBoardEditKey(post.id, trimmedKey);
     return post;
   }
@@ -277,7 +354,7 @@ export async function submitBoardPost({
     createdAt: new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
     office: String(office).trim(),
     title: trimmedTitle,
-    content: String(content).trim(),
+    content: packedContent,
     isPrivate: Boolean(isPrivate),
     files: encodedFiles.map((f) => ({
       name: f.name,
@@ -287,8 +364,7 @@ export async function submitBoardPost({
     hasEditKey: true,
     editKey: trimmedKey,
   });
-  // keep editKey only in local storage map + local post for verification
-  const stored = { ...post, editKey: trimmedKey };
+  const stored = { ...post, editKey: trimmedKey, content: packedContent, title: trimmedTitle };
   writeLocalPosts([stored, ...readLocalPosts()]);
   rememberBoardEditKey(post.id, trimmedKey);
   return post;
@@ -306,11 +382,20 @@ export async function updateBoardPost({
   adminToken = "",
 }) {
   const trimmedTitle = String(title || "").trim();
+  const trimmedContent = String(content || "").trim();
   if (!id) throw new Error("게시글 ID가 없습니다.");
   if (!trimmedTitle) throw new Error("제목을 입력해 주세요.");
+  if (!trimmedContent) throw new Error("내용을 입력해 주세요.");
 
   const fileError = validateBoardFiles(files);
   if (fileError) throw new Error(fileError);
+
+  const status = await fetchBoardApiStatus();
+  if (files?.length && status.outdated) {
+    throw new Error(
+      "첨부파일은 서버 스크립트 업데이트 후 사용할 수 있습니다. 최신 board-api.gs 재배포가 필요합니다."
+    );
+  }
 
   const encodedFiles = files?.length
     ? await Promise.all(Array.from(files).map(fileToBase64))
@@ -318,6 +403,7 @@ export async function updateBoardPost({
 
   const key = String(editKey || getRememberedBoardEditKey(id) || "").trim();
   const token = adminToken || (isBoardAdminAuthenticated() ? getBoardAdminToken() : "");
+  const packedContent = encodeBoardBody(trimmedTitle, trimmedContent);
 
   if (API_URL) {
     const result = await apiPost({
@@ -325,7 +411,7 @@ export async function updateBoardPost({
       id,
       office,
       title: trimmedTitle,
-      content,
+      content: packedContent,
       isPrivate: Boolean(isPrivate),
       files: encodedFiles,
       clearFiles: Boolean(clearFiles),
@@ -333,7 +419,10 @@ export async function updateBoardPost({
       adminToken: token,
     });
     if (key) rememberBoardEditKey(id, key);
-    return normalizeBoardPost(result.post || {});
+    const post = normalizeBoardPost(result.post || {});
+    if (!post.title) post.title = trimmedTitle;
+    if (!post.content) post.content = trimmedContent;
+    return post;
   }
 
   const posts = readLocalPosts();
@@ -357,7 +446,7 @@ export async function updateBoardPost({
     ...existing,
     office: String(office).trim(),
     title: trimmedTitle,
-    content: String(content).trim(),
+    content: packedContent,
     isPrivate: Boolean(isPrivate),
     files: nextFiles,
   };

@@ -9,6 +9,8 @@ import {
   isBoardAdminAuthenticated,
   setBoardAdminAuthenticated,
   isBoardApiConfigured,
+  fetchBoardApiStatus,
+  BOARD_API_REQUIRED_VERSION,
   validateBoardFiles,
   isImageFile,
   isVideoFile,
@@ -111,6 +113,7 @@ export default function PageBoard() {
   const fileInputRef = useRef(null);
 
   const [expandedId, setExpandedId] = useState(null);
+  const [apiStatus, setApiStatus] = useState(null);
 
   const [showAdmin, setShowAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(isBoardAdminAuthenticated());
@@ -139,6 +142,21 @@ export default function PageBoard() {
   useEffect(() => {
     loadPosts();
   }, [loadPosts]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!isBoardApiConfigured()) {
+        if (!cancelled) {
+          setApiStatus({ configured: false, outdated: false, supportsMedia: true, apiVersion: BOARD_API_REQUIRED_VERSION });
+        }
+        return;
+      }
+      const status = await fetchBoardApiStatus();
+      if (!cancelled) setApiStatus(status);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const resetForm = () => {
     setForm({ ...EMPTY_FORM });
@@ -310,6 +328,15 @@ export default function PageBoard() {
             <div className="survey-setup-notice" style={{ maxWidth: 820, margin: "0 auto 20px" }}>
               ℹ️ Google Apps Script 연동 전에는 이 브라우저에만 게시글이 저장됩니다(테스트 모드).
               운영 배포 시 <code>VITE_BOARD_API_URL</code>을 설정해 주세요.
+            </div>
+          )}
+          {apiStatus?.outdated && (
+            <div className="survey-setup-notice" style={{ maxWidth: 820, margin: "0 auto 20px", borderColor: "#e65100" }}>
+              ⚠️ 서버 스크립트가 오래되어 제목·첨부가 제대로 저장되지 않을 수 있습니다.
+              Google Apps Script에 프로젝트의 <code>google-apps-script/board-api.gs</code> 전체를 붙여넣은 뒤
+              <strong> migrateBoardSheet()</strong>, <strong>setupDriveFolder()</strong>를 실행하고
+              웹 앱을 <strong>새 버전으로 재배포</strong>해 주세요.
+              (현재 apiVersion: {apiStatus.apiVersion || 0} / 필요: {BOARD_API_REQUIRED_VERSION})
             </div>
           )}
 
