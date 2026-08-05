@@ -22,6 +22,32 @@ function normalizeNetworkError(err) {
   return err;
 }
 
+function explainNonJsonResponse(text, status) {
+  const sample = String(text || "").replace(/\s+/g, " ").trim().slice(0, 120);
+  if (!sample) {
+    return (
+      "가입신청 서버가 빈 응답을 반환했습니다. " +
+      "signup-api.gs 웹 앱을 새 버전으로 재배포하고 액세스를 '모든 사용자'로 설정해 주세요. URL은 /exec 로 끝나야 합니다."
+    );
+  }
+  if (/<!DOCTYPE|<html|Sign in|로그인|accounts\.google/i.test(sample)) {
+    return "Google 로그인/권한 페이지가 반환되었습니다. 웹 앱 액세스를 '모든 사용자'로 설정한 뒤 새 버전으로 재배포해 주세요.";
+  }
+  return `가입신청 서버 응답을 읽을 수 없습니다. (HTTP ${status || "?"})`;
+}
+
+async function parseJsonResponse(response) {
+  const text = await response.text();
+  if (!text || !String(text).trim()) {
+    throw new Error(explainNonJsonResponse("", response.status));
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(explainNonJsonResponse(text, response.status));
+  }
+}
+
 function readLocalSubmissions() {
   try {
     return JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]");
@@ -56,6 +82,33 @@ export function setSignupAdminAuthenticated(value, token = "") {
   }
 }
 
+/** 서명 dataURL을 JPEG로 압축해 전송·시트 저장 한도를 넘지 않게 합니다. */
+export async function compressSignatureDataUrl(dataUrl, maxWidth = 360, quality = 0.72) {
+  if (!dataUrl || typeof dataUrl !== "string") return "";
+  if (!dataUrl.startsWith("data:image")) return dataUrl;
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const scale = Math.min(1, maxWidth / Math.max(img.width, 1));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      } catch {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 async function apiGet(params) {
   if (!API_URL) throw new Error("가입신청 API URL이 설정되지 않았습니다.");
   const query = new URLSearchParams({ ...params, _: String(Date.now()) });
@@ -65,12 +118,7 @@ async function apiGet(params) {
   } catch (err) {
     throw normalizeNetworkError(err);
   }
-  let result;
-  try {
-    result = await response.json();
-  } catch {
-    throw new Error("Google Apps Script 응답을 읽을 수 없습니다.");
-  }
+  const result = await parseJsonResponse(response);
   const normalized = normalizeApiResult(result);
   if (!response.ok || !normalized.success) {
     throw new Error(normalized.error || "요청에 실패했습니다.");
@@ -90,12 +138,7 @@ async function apiPost(payload) {
   } catch (err) {
     throw normalizeNetworkError(err);
   }
-  let result;
-  try {
-    result = await response.json();
-  } catch {
-    throw new Error("서버 응답을 확인할 수 없습니다.");
-  }
+  const result = await parseJsonResponse(response);
   const normalized = normalizeApiResult(result);
   if (!response.ok || !normalized.success) {
     throw new Error(normalized.error || "요청에 실패했습니다.");
@@ -114,14 +157,24 @@ export async function submitSignupApplication({ application, withholding, sig1, 
   if (!app.rank && wh.rank) app.rank = wh.rank;
   if (!wh.rank && app.rank) wh.rank = app.rank;
 
+  if (!String(app.name || "").trim()) throw new Error("이름을 입력하세요.");
+  if (!String(app.affiliation || "").trim()) throw new Error("소속을 입력하세요.");
+  if (!sig1) throw new Error("가입신청서 서명을 해주세요.");
+  if (!sig2) throw new Error("원천징수 동의서 서명을 해주세요.");
+
+  const [compactSig1, compactSig2] = await Promise.all([
+    compressSignatureDataUrl(sig1),
+    compressSignatureDataUrl(sig2),
+  ]);
+
   const payload = {
     action: "submit",
     application: app,
     withholding: wh,
     member: app,
     bank: wh,
-    sig1,
-    sig2,
+    sig1: compactSig1,
+    sig2: compactSig2,
   };
 
   if (API_URL) {
@@ -138,8 +191,8 @@ export async function submitSignupApplication({ application, withholding, sig1, 
     applicationDate: app.applicationDate || app.joinDate,
     application: app,
     withholding: wh,
-    sig1,
-    sig2,
+    sig1: compactSig1,
+    sig2: compactSig2,
   };
   writeLocalSubmissions([submission, ...readLocalSubmissions()]);
   return submission;

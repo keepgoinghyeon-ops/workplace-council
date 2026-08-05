@@ -20,13 +20,40 @@ function SignaturePad({ label, onChange }) {
       y: (src.clientY - rect.top) * (canvas.height / rect.height),
     };
   };
+  const paintBg = (c) => {
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, c.width, c.height);
+  };
+  const exportSig = (c) => c.toDataURL("image/jpeg", 0.82);
+
   const start = (e) => { e.preventDefault(); drawing.current = true; const c = canvasRef.current; const ctx = c.getContext("2d"); const p = getPos(e, c); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
-  const draw = (e) => { e.preventDefault(); if (!drawing.current) return; const c = canvasRef.current; const ctx = c.getContext("2d"); const p = getPos(e, c); ctx.lineTo(p.x, p.y); ctx.strokeStyle = "#3e3232"; ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.stroke(); setHasSignature(true); onChange(c.toDataURL()); };
+  const draw = (e) => {
+    e.preventDefault();
+    if (!drawing.current) return;
+    const c = canvasRef.current;
+    const ctx = c.getContext("2d");
+    const p = getPos(e, c);
+    ctx.lineTo(p.x, p.y);
+    ctx.strokeStyle = "#3e3232";
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.stroke();
+    setHasSignature(true);
+    onChange(exportSig(c));
+  };
   const stop = (e) => { e.preventDefault(); drawing.current = false; };
-  const clear = () => { const c = canvasRef.current; c.getContext("2d").clearRect(0, 0, c.width, c.height); setHasSignature(false); onChange(null); };
+  const clear = () => {
+    const c = canvasRef.current;
+    paintBg(c);
+    setHasSignature(false);
+    onChange(null);
+  };
 
   useEffect(() => {
     const c = canvasRef.current;
+    paintBg(c);
     c.addEventListener("touchstart", start, { passive: false });
     c.addEventListener("touchmove", draw, { passive: false });
     c.addEventListener("touchend", stop, { passive: false });
