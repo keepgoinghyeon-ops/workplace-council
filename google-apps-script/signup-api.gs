@@ -4,10 +4,16 @@
  * Setup:
  * 1. Paste this entire file into its OWN Apps Script project (do not mix with board-api)
  * 2. Script property: SIGNUP_ADMIN_TOKEN = admin password
- * 3. Run setupSignupSheet()
+ * 3. Run ensureSignupSheet()  (기존 데이터 유지 — clear 하지 않음)
  * 4. Run setupSignupDriveFolder() and allow Drive
  * 5. Deploy > Web app > Execute as Me > Anyone > New version
  * 6. Use /exec URL as VITE_SIGNUP_API_URL
+ *
+ * 데이터 복구 (setupSignupSheet로 지워진 경우):
+ * 1. Google 스프레드시트 열기
+ * 2. 파일 > 버전 기록 > 버전 기록 보기
+ * 3. 데이터가 있던 시점 선택 > 이 버전 복원
+ *    또는 해당 버전에서 행을 복사해 현재 "가입신청" 시트로 붙여넣기
  */
 
 var SIGNUP_SHEET = "가입신청";
@@ -15,25 +21,83 @@ var DRIVE_FOLDER_NAME = "직협_가입신청_서명";
 var HEADERS = ["ID", "제출일시", "성명", "소속", "직급", "신청일", "데이터JSON"];
 var API_VERSION = 2;
 
-function setupSignupSheet() {
+/**
+ * 시트가 없으면 만들고, 헤더만 보정합니다.
+ * 기존 데이터는 절대 삭제하지 않습니다.
+ */
+function ensureSignupSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SIGNUP_SHEET);
-  if (!sheet) sheet = ss.insertSheet(SIGNUP_SHEET);
-  sheet.clear();
-  sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
-  sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight("bold");
+  if (!sheet) {
+    sheet = ss.insertSheet(SIGNUP_SHEET);
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+    sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+    return "가입신청 시트를 새로 만들었습니다.";
+  }
+
+  var lastCol = Math.max(sheet.getLastColumn(), 1);
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var empty = sheet.getLastRow() <= 1;
+  var headerOk = true;
+  for (var i = 0; i < HEADERS.length; i++) {
+    if (String(headers[i] || "") !== HEADERS[i]) {
+      headerOk = false;
+      break;
+    }
+  }
+
+  if (!headerOk && empty) {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+    sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+    return "빈 시트에 헤더만 설정했습니다. (데이터 없음)";
+  }
+
+  if (!headerOk && !empty) {
+    return (
+      "시트의 데이터가 있어 헤더를 자동 변경하지 않았습니다. " +
+      "현재 행 수: " +
+      sheet.getLastRow() +
+      ". 필요하면 수동으로 헤더를 확인하세요."
+    );
+  }
+
   sheet.setFrozenRows(1);
+  return "가입신청 시트 확인 완료. 행 수: " + sheet.getLastRow();
+}
+
+/** @deprecated 데이터 삭제 위험이 있어 비활성화했습니다. ensureSignupSheet()를 사용하세요. */
+function setupSignupSheet() {
+  return ensureSignupSheet();
 }
 
 function setupSignupDriveFolder() {
   getDriveFolder_();
 }
 
+/**
+ * Drive 서명 폴더에 남은 파일 목록을 로그로 출력합니다.
+ * (시트 복구 보조 — 파일명에 성명/ID가 포함될 수 있음)
+ */
+function listSignupSignatureFiles() {
+  var folder = getDriveFolder_();
+  var files = folder.getFiles();
+  var names = [];
+  while (files.hasNext()) {
+    var f = files.next();
+    names.push(f.getName() + " | " + f.getUrl());
+  }
+  Logger.log("서명 파일 " + names.length + "개");
+  for (var i = 0; i < names.length; i++) Logger.log(names[i]);
+  return names.length + " files logged. View > Logs";
+}
+
 function getSignupSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SIGNUP_SHEET);
   if (!sheet) {
-    setupSignupSheet();
+    ensureSignupSheet();
     sheet = ss.getSheetByName(SIGNUP_SHEET);
   }
   return sheet;
@@ -205,7 +269,7 @@ function createSubmission_(data) {
   } catch (sheetErr) {
     return {
       success: false,
-      error: "시트 저장에 실패했습니다. setupSignupSheet() 실행 여부를 확인해 주세요. (" + String(sheetErr) + ")",
+      error: "시트 저장에 실패했습니다. ensureSignupSheet() 실행 여부를 확인해 주세요. (" + String(sheetErr) + ")",
       apiVersion: API_VERSION,
     };
   }
