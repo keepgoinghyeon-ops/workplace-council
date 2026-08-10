@@ -420,7 +420,15 @@ export default function PageBoard() {
               운영 배포 시 <code>VITE_BOARD_API_URL</code>을 설정해 주세요.
             </div>
           )}
-          {!dismissApiBanner && apiStatus?.configured && (apiStatus.apiVersion || 0) < BOARD_API_REQUIRED_VERSION && (
+          {apiStatus?.wrongApi && (
+            <div className="survey-setup-notice" style={{ maxWidth: 820, margin: "0 auto 20px", borderColor: "#c62828" }}>
+              ❌ 자유게시판이 <strong>가입신청 API</strong>에 잘못 연결되어 있습니다.
+              GitHub Secret <code>VITE_BOARD_API_URL</code>을 <strong>board-api.gs</strong> 웹 앱 URL(<code>/exec</code>)로 바꾼 뒤
+              Actions로 Pages를 다시 배포해 주세요.
+              {apiStatus.error ? <div style={{ marginTop: 8 }}>{apiStatus.error}</div> : null}
+            </div>
+          )}
+          {!dismissApiBanner && apiStatus?.configured && !apiStatus?.wrongApi && (apiStatus.apiVersion || 0) < BOARD_API_REQUIRED_VERSION && (
             <div className="survey-setup-notice" style={{ maxWidth: 820, margin: "0 auto 20px", borderColor: "#e65100" }}>
               ⚠️ 사진이 안 보이면 Apps Script에 최신 board-api.gs를 붙여넣고 웹 앱을 <strong>새 버전</strong>으로 재배포해 주세요. (apiVersion 4)
               (글 수정·제목 작성은 계속 가능합니다)

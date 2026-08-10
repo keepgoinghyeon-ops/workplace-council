@@ -51,12 +51,23 @@ function normalizeApiResult(result) {
     post: result.post ?? result.게시글,
     error: result.error ?? result.오류 ?? result.에러 ?? "",
     apiVersion: Number(result.apiVersion ?? result.version ?? 0) || 0,
+    service: result.service || result.서비스 || "",
     // action=file 응답
     data: result.data ?? result.데이터 ?? "",
     mimeType: result.mimeType ?? result.mime ?? "",
     name: result.name ?? result.파일명 ?? "",
     size: result.size ?? 0,
   };
+}
+
+function explainWrongBoardApiUrl(errorText = "") {
+  if (/관리자 인증에 실패/i.test(errorText)) {
+    return (
+      "자유게시판 URL이 가입신청(signup) API로 연결되어 있습니다. " +
+      "GitHub Secret의 VITE_BOARD_API_URL을 board-api.gs 웹 앱(/exec) 주소로 바꾼 뒤 Pages를 다시 배포해 주세요."
+    );
+  }
+  return "";
 }
 
 function normalizeNetworkError(err) {
@@ -380,7 +391,8 @@ async function apiPost(payload) {
   const result = await parseJsonResponse(response);
   const normalized = normalizeApiResult(result);
   if (!response.ok || !normalized.success) {
-    throw new Error(normalized.error || "요청에 실패했습니다.");
+    const wrong = explainWrongBoardApiUrl(normalized.error || "");
+    throw new Error(wrong || normalized.error || "요청에 실패했습니다.");
   }
   return normalized;
 }
@@ -405,20 +417,36 @@ export async function fetchBoardApiStatus() {
 
   try {
     const result = await apiGet({ action: "status" });
-    return fromVersion(result.apiVersion || 0);
+    const service = String(result.service || "");
+    if (service && service !== "board-api") {
+      return {
+        configured: true,
+        apiVersion: result.apiVersion || 0,
+        supportsMedia: false,
+        outdated: true,
+        wrongApi: true,
+        service,
+        error:
+          `연결된 API가 자유게시판이 아닙니다 (${service || "unknown"}). ` +
+          "VITE_BOARD_API_URL에 board-api.gs 웹 앱 URL을 넣어 주세요.",
+      };
+    }
+    return fromVersion(result.apiVersion || 0, { service: service || "board-api" });
   } catch {
     // status 액션이 없거나 실패한 경우 list 응답의 apiVersion으로 재확인
     try {
       const list = await apiGet({ action: "list" });
       return fromVersion(list.apiVersion || 0, { probedVia: "list" });
     } catch (err) {
+      const wrong = explainWrongBoardApiUrl(err.message || "");
       return {
         configured: true,
         apiVersion: 0,
         supportsMedia: true, // 판별 실패 시 첨부를 막지 않음
         outdated: false,
         unreachable: true,
-        error: err.message || "서버 상태를 확인할 수 없습니다.",
+        wrongApi: Boolean(wrong),
+        error: wrong || err.message || "서버 상태를 확인할 수 없습니다.",
       };
     }
   }
