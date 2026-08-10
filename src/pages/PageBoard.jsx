@@ -17,8 +17,6 @@ import {
   getVideoEmbedUrl,
   getMediaOpenUrl,
   getImageDisplayCandidates,
-  getDriveFileId,
-  fetchBoardFileDataUrl,
   getRememberedBoardEditKey,
 } from "../lib/boardApi";
 
@@ -38,84 +36,27 @@ const EMPTY_FORM = {
 };
 
 function BoardImage({ file }) {
-  const [src, setSrc] = useState("");
-  const [candidates, setCandidates] = useState([]);
+  const candidates = getImageDisplayCandidates(file);
   const [index, setIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const src = candidates[index] || "";
   const openUrl = getMediaOpenUrl(file);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setSrc("");
-    setIndex(0);
-
-    (async () => {
-      // 로컬 모드 data URL
-      if (file?.url && String(file.url).startsWith("data:")) {
-        if (!cancelled) {
-          setSrc(file.url);
-          setCandidates([file.url]);
-          setLoading(false);
-        }
-        return;
-      }
-
-      const id = getDriveFileId(file);
-      if (id && isBoardApiConfigured()) {
-        try {
-          const dataUrl = await fetchBoardFileDataUrl(id);
-          if (!cancelled) {
-            setSrc(dataUrl);
-            setCandidates([dataUrl]);
-            setLoading(false);
-          }
-          return;
-        } catch {
-          // 프록시 실패 시 Drive URL 후보로 폴백
-        }
-      }
-
-      const list = getImageDisplayCandidates(file);
-      if (!cancelled) {
-        setCandidates(list);
-        setSrc(list[0] || "");
-        setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [file]);
-
-  const displaySrc = candidates[index] || src;
-
-  if (loading) {
-    return (
-      <div className="board-gallery-item board-gallery-item--loading">
-        <span className="board-media-fallback">사진 불러오는 중…</span>
-      </div>
-    );
-  }
-
-  if (!displaySrc && !openUrl) return null;
+  if (!src && !openUrl) return null;
 
   return (
     <a
-      href={displaySrc?.startsWith("data:") ? displaySrc : openUrl || displaySrc}
+      href={openUrl || src}
       target="_blank"
       rel="noopener noreferrer"
       className="board-gallery-item"
     >
-      {displaySrc ? (
+      {src ? (
         <img
-          src={displaySrc}
+          src={src}
           alt={file.name || "첨부 사진"}
           loading="lazy"
           onError={() => {
             if (index < candidates.length - 1) setIndex((v) => v + 1);
-            else setSrc("");
           }}
         />
       ) : (
@@ -422,7 +363,7 @@ export default function PageBoard() {
           )}
           {!dismissApiBanner && apiStatus?.configured && (apiStatus.apiVersion || 0) < BOARD_API_REQUIRED_VERSION && (
             <div className="survey-setup-notice" style={{ maxWidth: 820, margin: "0 auto 20px", borderColor: "#e65100" }}>
-              ⚠️ 사진이 안 보이면 Apps Script에 최신 board-api.gs를 붙여넣고 웹 앱을 <strong>새 버전</strong>으로 재배포해 주세요. (apiVersion 4)
+              ⚠️ 참고: 사진·동영상 첨부를 쓰려면 Apps Script 재배포가 필요합니다.
               (글 수정·제목 작성은 계속 가능합니다)
               <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <button
