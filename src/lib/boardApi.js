@@ -5,11 +5,13 @@ const TOKEN_KEY = "wc-board-admin-token";
 const EDIT_KEYS_KEY = "wc-board-edit-keys";
 
 /** 서버 board-api.gs 의 API_VERSION 과 맞춰야 제목·첨부가 정상 동작합니다. */
-export const BOARD_API_REQUIRED_VERSION = 3;
+export const BOARD_API_REQUIRED_VERSION = 4;
 
 const MAX_FILES = 5;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 12 * 1024 * 1024;
+const IMAGE_MAX_EDGE = 1280;
+const IMAGE_JPEG_QUALITY = 0.72;
 
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|svg)$/i;
 const VIDEO_EXT = /\.(mp4|webm|mov|m4v|avi|mkv|ogg|ogv)$/i;
@@ -49,7 +51,23 @@ function normalizeApiResult(result) {
     post: result.post ?? result.게시글,
     error: result.error ?? result.오류 ?? result.에러 ?? "",
     apiVersion: Number(result.apiVersion ?? result.version ?? 0) || 0,
+    service: result.service || result.서비스 || "",
+    // action=file 응답
+    data: result.data ?? result.데이터 ?? "",
+    mimeType: result.mimeType ?? result.mime ?? "",
+    name: result.name ?? result.파일명 ?? "",
+    size: result.size ?? 0,
   };
+}
+
+function explainWrongBoardApiUrl(errorText = "") {
+  if (/관리자 인증에 실패/i.test(errorText)) {
+    return (
+      "자유게시판 URL이 가입신청(signup) API로 연결되어 있습니다. " +
+      "GitHub Secret의 VITE_BOARD_API_URL을 board-api.gs 웹 앱(/exec) 주소로 바꾼 뒤 Pages를 다시 배포해 주세요."
+    );
+  }
+  return "";
 }
 
 function normalizeNetworkError(err) {
@@ -241,11 +259,65 @@ export async function fileToBase64(file) {
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = String(reader.result || "").split(",")[1] || "";
-      resolve({ name: file.name, mimeType: file.type, data: base64 });
+      resolve({ name: file.name, mimeType: file.type || "application/octet-stream", data: base64 });
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+/** 업로드 실패·용량 초과를 줄이기 위해 사진을 JPEG로 압축합니다. */
+export async function compressBoardImageFile(file) {
+  const mime = file.type || "";
+  const isImage = mime.startsWith("image/") || IMAGE_EXT.test(file.name || "");
+  if (!isImage) return file;
+  if (/gif|svg/i.test(mime) || /\.gif$/i.test(file.name || "")) return file;
+
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, IMAGE_MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bitmap.close();
+      return file;
+    }
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+
+    const blob = await new Promise((resolve) => {
+      canvas.toBlob(resolve, "image/jpeg", IMAGE_JPEG_QUALITY);
+    });
+    if (!blob || blob.size >= file.size) return file;
+
+    const base = String(file.name || "image").replace(/\.[^.]+$/, "");
+    return new File([blob], `${base}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
+  } catch {
+    return file;
+  }
+}
+
+export async function prepareBoardFiles(files) {
+  const list = Array.from(files || []);
+  const out = [];
+  for (const file of list) {
+    out.push(await compressBoardImageFile(file));
+  }
+  return out;
+}
+
+/** Drive 공개 링크 대신 Apps Script가 파일을 내려줍니다. */
+export async function fetchBoardFileDataUrl(fileId) {
+  if (!fileId) throw new Error("파일 ID가 없습니다.");
+  if (!API_URL) throw new Error("자유게시판 API URL이 설정되지 않았습니다.");
+  const result = await apiGet({ action: "file", id: fileId });
+  if (!result.data) throw new Error("파일 데이터가 비어 있습니다.");
+  const mime = result.mimeType || "application/octet-stream";
+  return `data:${mime};base64,${result.data}`;
 }
 
 function explainNonJsonResponse(text, status) {
@@ -299,7 +371,8 @@ async function apiGet(params) {
   const result = await parseJsonResponse(response);
   const normalized = normalizeApiResult(result);
   if (!response.ok || !normalized.success) {
-    throw new Error(normalized.error || "요청에 실패했습니다.");
+    const wrong = explainWrongBoardApiUrl(normalized.error || "");
+    throw new Error(wrong || normalized.error || "요청에 실패했습니다.");
   }
   return normalized;
 }
@@ -319,7 +392,8 @@ async function apiPost(payload) {
   const result = await parseJsonResponse(response);
   const normalized = normalizeApiResult(result);
   if (!response.ok || !normalized.success) {
-    throw new Error(normalized.error || "요청에 실패했습니다.");
+    const wrong = explainWrongBoardApiUrl(normalized.error || "");
+    throw new Error(wrong || normalized.error || "요청에 실패했습니다.");
   }
   return normalized;
 }
@@ -344,20 +418,36 @@ export async function fetchBoardApiStatus() {
 
   try {
     const result = await apiGet({ action: "status" });
-    return fromVersion(result.apiVersion || 0);
+    const service = String(result.service || "");
+    if (service && service !== "board-api") {
+      return {
+        configured: true,
+        apiVersion: result.apiVersion || 0,
+        supportsMedia: false,
+        outdated: true,
+        wrongApi: true,
+        service,
+        error:
+          `연결된 API가 자유게시판이 아닙니다 (${service || "unknown"}). ` +
+          "VITE_BOARD_API_URL에 board-api.gs 웹 앱 URL을 넣어 주세요.",
+      };
+    }
+    return fromVersion(result.apiVersion || 0, { service: service || "board-api" });
   } catch {
     // status 액션이 없거나 실패한 경우 list 응답의 apiVersion으로 재확인
     try {
       const list = await apiGet({ action: "list" });
       return fromVersion(list.apiVersion || 0, { probedVia: "list" });
     } catch (err) {
+      const wrong = explainWrongBoardApiUrl(err.message || "");
       return {
         configured: true,
         apiVersion: 0,
         supportsMedia: true, // 판별 실패 시 첨부를 막지 않음
         outdated: false,
         unreachable: true,
-        error: err.message || "서버 상태를 확인할 수 없습니다.",
+        wrongApi: Boolean(wrong),
+        error: wrong || err.message || "서버 상태를 확인할 수 없습니다.",
       };
     }
   }
@@ -393,10 +483,11 @@ export async function submitBoardPost({
   if (!trimmedContent) throw new Error("내용을 입력해 주세요.");
   if (trimmedKey.length < 4) throw new Error("수정용 비밀번호를 4자 이상 입력해 주세요.");
 
-  const fileError = validateBoardFiles(files);
+  const preparedFiles = await prepareBoardFiles(files);
+  const fileError = validateBoardFiles(preparedFiles);
   if (fileError) throw new Error(fileError);
 
-  const encodedFiles = await Promise.all(Array.from(files || []).map(fileToBase64));
+  const encodedFiles = await Promise.all(preparedFiles.map(fileToBase64));
   // 구버전 서버는 title 필드를 무시하므로, 본문에 제목을 함께 넣어 호환합니다.
   const packedContent = encodeBoardBody(trimmedTitle, trimmedContent);
 
@@ -424,7 +515,7 @@ export async function submitBoardPost({
     if (!post.content) post.content = trimmedContent;
     if (encodedFiles.length && !(post.files || []).length) {
       throw new Error(
-        "글은 등록됐지만 첨부파일이 저장되지 않았습니다. Apps Script에 최신 board-api.gs를 붙여넣고 setupDriveFolder() 실행 후 웹 앱을 '새 버전'으로 재배포해 주세요. (apiVersion 3 필요)"
+        "글은 등록됐지만 첨부파일이 저장되지 않았습니다. Apps Script에 최신 board-api.gs를 붙여넣고 setupDriveFolder() 실행 후 웹 앱을 '새 버전'으로 재배포해 주세요. (apiVersion 4 필요)"
       );
     }
     rememberBoardEditKey(post.id, trimmedKey);
@@ -469,11 +560,12 @@ export async function updateBoardPost({
   if (!trimmedTitle) throw new Error("제목을 입력해 주세요.");
   if (!trimmedContent) throw new Error("내용을 입력해 주세요.");
 
-  const fileError = validateBoardFiles(files);
+  const preparedFiles = files?.length ? await prepareBoardFiles(files) : [];
+  const fileError = validateBoardFiles(preparedFiles);
   if (fileError) throw new Error(fileError);
 
-  const encodedFiles = files?.length
-    ? await Promise.all(Array.from(files).map(fileToBase64))
+  const encodedFiles = preparedFiles.length
+    ? await Promise.all(preparedFiles.map(fileToBase64))
     : [];
 
   const key = String(editKey || getRememberedBoardEditKey(id) || "").trim();

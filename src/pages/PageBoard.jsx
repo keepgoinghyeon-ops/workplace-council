@@ -17,6 +17,8 @@ import {
   getVideoEmbedUrl,
   getMediaOpenUrl,
   getImageDisplayCandidates,
+  getDriveFileId,
+  fetchBoardFileDataUrl,
   getRememberedBoardEditKey,
 } from "../lib/boardApi";
 
@@ -36,27 +38,84 @@ const EMPTY_FORM = {
 };
 
 function BoardImage({ file }) {
-  const candidates = getImageDisplayCandidates(file);
+  const [src, setSrc] = useState("");
+  const [candidates, setCandidates] = useState([]);
   const [index, setIndex] = useState(0);
-  const src = candidates[index] || "";
+  const [loading, setLoading] = useState(true);
   const openUrl = getMediaOpenUrl(file);
 
-  if (!src && !openUrl) return null;
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setSrc("");
+    setIndex(0);
+
+    (async () => {
+      // 로컬 모드 data URL
+      if (file?.url && String(file.url).startsWith("data:")) {
+        if (!cancelled) {
+          setSrc(file.url);
+          setCandidates([file.url]);
+          setLoading(false);
+        }
+        return;
+      }
+
+      const id = getDriveFileId(file);
+      if (id && isBoardApiConfigured()) {
+        try {
+          const dataUrl = await fetchBoardFileDataUrl(id);
+          if (!cancelled) {
+            setSrc(dataUrl);
+            setCandidates([dataUrl]);
+            setLoading(false);
+          }
+          return;
+        } catch {
+          // 프록시 실패 시 Drive URL 후보로 폴백
+        }
+      }
+
+      const list = getImageDisplayCandidates(file);
+      if (!cancelled) {
+        setCandidates(list);
+        setSrc(list[0] || "");
+        setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [file]);
+
+  const displaySrc = candidates[index] || src;
+
+  if (loading) {
+    return (
+      <div className="board-gallery-item board-gallery-item--loading">
+        <span className="board-media-fallback">사진 불러오는 중…</span>
+      </div>
+    );
+  }
+
+  if (!displaySrc && !openUrl) return null;
 
   return (
     <a
-      href={openUrl || src}
+      href={displaySrc?.startsWith("data:") ? displaySrc : openUrl || displaySrc}
       target="_blank"
       rel="noopener noreferrer"
       className="board-gallery-item"
     >
-      {src ? (
+      {displaySrc ? (
         <img
-          src={src}
+          src={displaySrc}
           alt={file.name || "첨부 사진"}
           loading="lazy"
           onError={() => {
             if (index < candidates.length - 1) setIndex((v) => v + 1);
+            else setSrc("");
           }}
         />
       ) : (
@@ -361,9 +420,17 @@ export default function PageBoard() {
               운영 배포 시 <code>VITE_BOARD_API_URL</code>을 설정해 주세요.
             </div>
           )}
-          {!dismissApiBanner && apiStatus?.configured && (apiStatus.apiVersion || 0) < BOARD_API_REQUIRED_VERSION && (
+          {apiStatus?.wrongApi && (
+            <div className="survey-setup-notice" style={{ maxWidth: 820, margin: "0 auto 20px", borderColor: "#c62828" }}>
+              ❌ 자유게시판이 <strong>가입신청 API</strong>에 잘못 연결되어 있습니다.
+              GitHub Secret <code>VITE_BOARD_API_URL</code>을 <strong>board-api.gs</strong> 웹 앱 URL(<code>/exec</code>)로 바꾼 뒤
+              Actions로 Pages를 다시 배포해 주세요.
+              {apiStatus.error ? <div style={{ marginTop: 8 }}>{apiStatus.error}</div> : null}
+            </div>
+          )}
+          {!dismissApiBanner && apiStatus?.configured && !apiStatus?.wrongApi && (apiStatus.apiVersion || 0) < BOARD_API_REQUIRED_VERSION && (
             <div className="survey-setup-notice" style={{ maxWidth: 820, margin: "0 auto 20px", borderColor: "#e65100" }}>
-              ⚠️ 참고: 사진·동영상 첨부를 쓰려면 Apps Script 재배포가 필요합니다.
+              ⚠️ 사진이 안 보이면 Apps Script에 최신 board-api.gs를 붙여넣고 웹 앱을 <strong>새 버전</strong>으로 재배포해 주세요. (apiVersion 4)
               (글 수정·제목 작성은 계속 가능합니다)
               <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <button

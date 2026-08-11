@@ -8,12 +8,14 @@
  * 4. Run setupDriveFolder() and allow Drive access
  * 5. Deploy > New deployment > Web app > Anyone
  * 6. Use the /exec URL as VITE_BOARD_API_URL
+ *
+ * API_VERSION 4: 사진 표시는 Drive 공개 URL 대신 action=file 프록시 사용
  */
 
 var BOARD_SHEET = "자유게시판";
 var DRIVE_FOLDER_NAME = "직협_자유게시판_첨부파일";
 var HEADERS = ["ID", "작성일시", "지청명", "제목", "내용", "비공개", "첨부파일JSON", "수정키"];
-var API_VERSION = 3;
+var API_VERSION = 4;
 var TITLE_MARK = "【제목】";
 var BODY_MARK = "\n\n【본문】\n";
 
@@ -259,8 +261,45 @@ function sharePublic_(file) {
     try {
       file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
     } catch (e2) {
-      // Workspace 정책으로 공개 공유가 막혀 있을 수 있음
+      // Workspace 정책으로 공개 공유가 막혀 있어도
+      // action=file 프록시로 사진은 표시 가능
     }
+  }
+}
+
+function isInBoardFolder_(file) {
+  try {
+    var folder = getDriveFolder_();
+    var parents = file.getParents();
+    while (parents.hasNext()) {
+      if (parents.next().getId() === folder.getId()) return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+/** Drive 공개 URL 대신 웹앱이 파일을 직접 내려줌 (사진 표시용) */
+function serveFile_(id) {
+  if (!id) return fail_("파일 ID가 없습니다.");
+  try {
+    var file = DriveApp.getFileById(id);
+    if (!isInBoardFolder_(file)) {
+      return fail_("허용되지 않은 파일입니다.");
+    }
+    var blob = file.getBlob();
+    var bytes = blob.getBytes();
+    // Apps Script 응답 한도 고려 (약 4MB)
+    if (bytes.length > 4 * 1024 * 1024) {
+      return fail_("파일이 커서 미리보기를 지원하지 않습니다.");
+    }
+    return ok_({
+      mimeType: blob.getContentType() || "application/octet-stream",
+      data: Utilities.base64Encode(bytes),
+      name: file.getName(),
+      size: bytes.length,
+    });
+  } catch (err) {
+    return fail_("파일을 불러오지 못했습니다: " + String(err));
   }
 }
 
@@ -269,30 +308,42 @@ function saveFiles_(files) {
   var folder = getDriveFolder_();
   var saved = [];
 
-  files.forEach(function (f) {
-    if (!f.data || !f.name) return;
+  files.forEach(function (f, idx) {
+    if (!f || !f.data || !f.name) {
+      throw new Error((idx + 1) + "번째 첨부파일 데이터가 비어 있습니다.");
+    }
     var mime = guessMime_(f.name, f.mimeType);
-    var blob = Utilities.newBlob(
-      Utilities.base64Decode(f.data),
-      mime,
-      f.name
-    );
+    var decoded;
+    try {
+      decoded = Utilities.base64Decode(f.data);
+    } catch (decodeErr) {
+      throw new Error('"' + f.name + '" 디코딩에 실패했습니다.');
+    }
+    if (!decoded || !decoded.length) {
+      throw new Error('"' + f.name + '" 내용이 비어 있습니다.');
+    }
+    var blob = Utilities.newBlob(decoded, mime, f.name);
     var file = folder.createFile(blob);
     sharePublic_(file);
-    Utilities.sleep(300); // 공유/인덱싱 반영 대기
+    Utilities.sleep(200);
     var id = file.getId();
     var isVideo = String(mime).indexOf("video/") === 0;
     saved.push({
       name: f.name,
       mimeType: mime,
       id: id,
-      url: isVideo ? previewUrl_(id) : "https://drive.google.com/thumbnail?id=" + id + "&sz=w1600",
-      thumbUrl: isVideo ? "" : "https://drive.google.com/thumbnail?id=" + id + "&sz=w1600",
+      // 사진은 프론트가 action=file 프록시로 불러옴
+      url: isVideo ? previewUrl_(id) : "",
+      thumbUrl: "",
       previewUrl: previewUrl_(id),
       driveUrl: viewUrl_(id),
+      viaProxy: !isVideo,
     });
   });
 
+  if (!saved.length) {
+    throw new Error("첨부파일이 하나도 저장되지 않았습니다.");
+  }
   return saved;
 }
 
@@ -550,6 +601,9 @@ function doGet(e) {
     var action = (e && e.parameter && e.parameter.action) || "list";
     if (action === "status") {
       return jsonResponse(ok_({ service: "board-api", status: "ok" }));
+    }
+    if (action === "file") {
+      return jsonResponse(serveFile_((e.parameter && e.parameter.id) || ""));
     }
     if (action === "list") {
       var adminToken = (e.parameter && e.parameter.adminToken) || "";
