@@ -87,26 +87,64 @@ export async function compressSignatureDataUrl(dataUrl, maxWidth = 360, quality 
   if (!dataUrl || typeof dataUrl !== "string") return "";
   if (!dataUrl.startsWith("data:image")) return dataUrl;
 
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      try {
-        const scale = Math.min(1, maxWidth / Math.max(img.width, 1));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1, Math.round(img.width * scale));
-        canvas.height = Math.max(1, Math.round(img.height * scale));
-        const ctx = canvas.getContext("2d");
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", quality));
-      } catch {
-        resolve(dataUrl);
-      }
+  try {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    let bitmap;
+    try {
+      bitmap = await createImageBitmap(blob);
+    } catch {
+      bitmap = null;
+    }
+
+    const drawToJpeg = (width, height, paint) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, width);
+      canvas.height = Math.max(1, height);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return dataUrl;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      paint(ctx, canvas.width, canvas.height);
+      return canvas.toDataURL("image/jpeg", quality);
     };
-    img.onerror = () => resolve(dataUrl);
-    img.src = dataUrl;
-  });
+
+    if (bitmap) {
+      const scale = Math.min(1, maxWidth / Math.max(bitmap.width, 1));
+      const out = drawToJpeg(
+        Math.round(bitmap.width * scale),
+        Math.round(bitmap.height * scale),
+        (ctx, w, h) => {
+          ctx.drawImage(bitmap, 0, 0, w, h);
+          bitmap.close?.();
+        }
+      );
+      return out;
+    }
+
+    // createImageBitmap 불가 시 Image 폴백
+    return await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, maxWidth / Math.max(img.width, 1));
+          resolve(
+            drawToJpeg(
+              Math.round(img.width * scale),
+              Math.round(img.height * scale),
+              (ctx, w, h) => ctx.drawImage(img, 0, 0, w, h)
+            )
+          );
+        } catch {
+          resolve(dataUrl);
+        }
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  } catch {
+    return dataUrl;
+  }
 }
 
 async function apiGet(params) {
@@ -166,6 +204,10 @@ export async function submitSignupApplication({ application, withholding, sig1, 
     compressSignatureDataUrl(sig1),
     compressSignatureDataUrl(sig2),
   ]);
+
+  if (!compactSig1 || !compactSig2) {
+    throw new Error("서명 이미지를 처리하지 못했습니다. 서명란에 다시 서명한 뒤 제출해 주세요.");
+  }
 
   const payload = {
     action: "submit",

@@ -1084,13 +1084,15 @@ a { color: inherit; text-decoration: none; }
 }
 .signup-sig-canvas {
   width: 100%;
-  height: 100px;
+  height: 120px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--bg);
+  background: #fff;
   cursor: crosshair;
   display: block;
   touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .signup-date-hint {
   font-size: 11px;

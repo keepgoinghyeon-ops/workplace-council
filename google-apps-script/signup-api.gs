@@ -4,25 +4,60 @@
  * Setup:
  * 1. Paste this entire file into its OWN Apps Script project (do not mix with board-api)
  * 2. Script property: SIGNUP_ADMIN_TOKEN = admin password
- * 3. Run setupSignupSheet()
+ * 3. Run ensureSignupSheet()  (기존 데이터 유지 — clear 하지 않음)
  * 4. Run setupSignupDriveFolder() and allow Drive
  * 5. Deploy > Web app > Execute as Me > Anyone > New version
  * 6. Use /exec URL as VITE_SIGNUP_API_URL
+ *
+ * 주의: setupSignupSheet() 예전 버전은 sheet.clear()로 데이터를 지웠습니다.
+ *       반드시 ensureSignupSheet()만 사용하세요.
  */
 
 var SIGNUP_SHEET = "가입신청";
 var DRIVE_FOLDER_NAME = "직협_가입신청_서명";
 var HEADERS = ["ID", "제출일시", "성명", "소속", "직급", "신청일", "데이터JSON"];
-var API_VERSION = 2;
+var API_VERSION = 3;
 
-function setupSignupSheet() {
+/**
+ * 시트가 없으면 만들고, 헤더만 보정합니다.
+ * 기존 데이터는 절대 삭제하지 않습니다.
+ */
+function ensureSignupSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SIGNUP_SHEET);
-  if (!sheet) sheet = ss.insertSheet(SIGNUP_SHEET);
-  sheet.clear();
-  sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
-  sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight("bold");
+  if (!sheet) {
+    sheet = ss.insertSheet(SIGNUP_SHEET);
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+    sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+    return "가입신청 시트를 새로 만들었습니다.";
+  }
+
+  var lastCol = Math.max(sheet.getLastColumn(), 1);
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var empty = sheet.getLastRow() <= 1;
+  var headerOk = true;
+  for (var i = 0; i < HEADERS.length; i++) {
+    if (String(headers[i] || "") !== HEADERS[i]) {
+      headerOk = false;
+      break;
+    }
+  }
+
+  if (!headerOk && empty) {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+    sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+    return "빈 시트에 헤더만 설정했습니다.";
+  }
+
   sheet.setFrozenRows(1);
+  return "가입신청 시트 확인 완료. 행 수: " + sheet.getLastRow();
+}
+
+/** @deprecated clear 위험이 있어 ensureSignupSheet로 위임합니다. */
+function setupSignupSheet() {
+  return ensureSignupSheet();
 }
 
 function setupSignupDriveFolder() {
@@ -33,7 +68,7 @@ function getSignupSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SIGNUP_SHEET);
   if (!sheet) {
-    setupSignupSheet();
+    ensureSignupSheet();
     sheet = ss.getSheetByName(SIGNUP_SHEET);
   }
   return sheet;
@@ -75,7 +110,7 @@ function sharePublic_(file) {
   }
 }
 
-/** dataURL 또는 이미 URL인 서명을 Drive URL로 저장합니다. */
+/** dataURL 서명을 저장합니다. 작은 서명은 dataURL 유지(표시 안정), Drive는 백업. */
 function storeSignature_(dataUrl, fileName) {
   if (!dataUrl) return "";
   var raw = String(dataUrl);
@@ -91,16 +126,25 @@ function storeSignature_(dataUrl, fileName) {
   if (mimeMatch) mime = mimeMatch[1];
   var ext = mime.indexOf("jpeg") >= 0 || mime.indexOf("jpg") >= 0 ? ".jpg" : ".png";
 
+  // 압축된 서명은 시트에 dataURL로 두는 편이 미리보기·PDF에 안정적
+  if (raw.length < 40000) {
+    try {
+      var blob = Utilities.newBlob(Utilities.base64Decode(b64), mime, fileName + ext);
+      getDriveFolder_().createFile(blob);
+    } catch (backupErr) {
+      // Drive 백업 실패해도 dataURL로 제출 가능
+    }
+    return raw;
+  }
+
   try {
-    var blob = Utilities.newBlob(Utilities.base64Decode(b64), mime, fileName + ext);
-    var file = getDriveFolder_().createFile(blob);
+    var bigBlob = Utilities.newBlob(Utilities.base64Decode(b64), mime, fileName + ext);
+    var file = getDriveFolder_().createFile(bigBlob);
     sharePublic_(file);
     var id = file.getId();
-    // thumbnail 이 img/PDF 표시에 더 안정적입니다.
     return "https://drive.google.com/thumbnail?id=" + id + "&sz=w800";
   } catch (err) {
-    // Drive 실패 시 작은 서명만 시트에 남기고, 너무 크면 비움
-    if (raw.length < 40000) return raw;
+    if (raw.length < 48000) return raw;
     throw new Error(
       "서명 저장에 실패했습니다. Apps Script에서 setupSignupDriveFolder()를 실행하고 Drive 권한을 허용한 뒤 웹 앱을 새 버전으로 재배포해 주세요. (" +
         String(err) +
@@ -205,7 +249,7 @@ function createSubmission_(data) {
   } catch (sheetErr) {
     return {
       success: false,
-      error: "시트 저장에 실패했습니다. setupSignupSheet() 실행 여부를 확인해 주세요. (" + String(sheetErr) + ")",
+      error: "시트 저장에 실패했습니다. ensureSignupSheet() 실행 여부를 확인해 주세요. (" + String(sheetErr) + ")",
       apiVersion: API_VERSION,
     };
   }

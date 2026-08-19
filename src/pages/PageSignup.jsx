@@ -10,73 +10,141 @@ import FlexibleDateInput from "../components/FlexibleDateInput";
 function SignaturePad({ label, onChange }) {
   const canvasRef = useRef(null);
   const drawing = useRef(false);
+  const onChangeRef = useRef(onChange);
   const [hasSignature, setHasSignature] = useState(false);
 
-  const getPos = (e, canvas) => {
-    const rect = canvas.getBoundingClientRect();
-    const src = e.touches ? e.touches[0] : e;
-    return {
-      x: (src.clientX - rect.left) * (canvas.width / rect.width),
-      y: (src.clientY - rect.top) * (canvas.height / rect.height),
-    };
-  };
-  const paintBg = (c) => {
-    const ctx = c.getContext("2d");
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, c.width, c.height);
-  };
-  const exportSig = (c) => c.toDataURL("image/jpeg", 0.82);
-
-  const start = (e) => { e.preventDefault(); drawing.current = true; const c = canvasRef.current; const ctx = c.getContext("2d"); const p = getPos(e, c); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
-  const draw = (e) => {
-    e.preventDefault();
-    if (!drawing.current) return;
-    const c = canvasRef.current;
-    const ctx = c.getContext("2d");
-    const p = getPos(e, c);
-    ctx.lineTo(p.x, p.y);
-    ctx.strokeStyle = "#3e3232";
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.stroke();
-    setHasSignature(true);
-    onChange(exportSig(c));
-  };
-  const stop = (e) => { e.preventDefault(); drawing.current = false; };
-  const clear = () => {
-    const c = canvasRef.current;
-    paintBg(c);
-    setHasSignature(false);
-    onChange(null);
-  };
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
-    const c = canvasRef.current;
-    paintBg(c);
-    c.addEventListener("touchstart", start, { passive: false });
-    c.addEventListener("touchmove", draw, { passive: false });
-    c.addEventListener("touchend", stop, { passive: false });
-    return () => { c.removeEventListener("touchstart", start); c.removeEventListener("touchmove", draw); c.removeEventListener("touchend", stop); };
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const paintBg = () => {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+    };
+
+    const getPos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: ((e.clientX - rect.left) / Math.max(rect.width, 1)) * canvas.width,
+        y: ((e.clientY - rect.top) / Math.max(rect.height, 1)) * canvas.height,
+      };
+    };
+
+    const exportSig = () => canvas.toDataURL("image/jpeg", 0.85);
+
+    const hasInk = () => {
+      try {
+        const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i] < 250 || data[i + 1] < 250 || data[i + 2] < 250) return true;
+        }
+      } catch {
+        return true;
+      }
+      return false;
+    };
+
+    const onPointerDown = (e) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      e.preventDefault();
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      drawing.current = true;
+      const p = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    };
+
+    const onPointerMove = (e) => {
+      if (!drawing.current) return;
+      e.preventDefault();
+      const p = getPos(e);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      setHasSignature(true);
+      onChangeRef.current?.(exportSig());
+    };
+
+    const onPointerUp = (e) => {
+      if (!drawing.current) return;
+      e.preventDefault();
+      drawing.current = false;
+      try {
+        canvas.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      if (hasInk()) {
+        setHasSignature(true);
+        onChangeRef.current?.(exportSig());
+      }
+    };
+
+    // 최초 1회만 캔버스 해상도 맞춤 (리사이즈 시 서명이 지워지지 않도록)
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.round(rect.width * dpr));
+    canvas.height = Math.max(1, Math.round(rect.height * dpr));
+    paintBg();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#3e3232";
+    ctx.lineWidth = Math.max(2, 2.4 * dpr);
+
+    canvas.addEventListener("pointerdown", onPointerDown);
+    canvas.addEventListener("pointermove", onPointerMove);
+    canvas.addEventListener("pointerup", onPointerUp);
+    canvas.addEventListener("pointercancel", onPointerUp);
+
+    canvas._clearSignature = () => {
+      paintBg();
+      setHasSignature(false);
+      onChangeRef.current?.(null);
+    };
+
+    return () => {
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("pointermove", onPointerMove);
+      canvas.removeEventListener("pointerup", onPointerUp);
+      canvas.removeEventListener("pointercancel", onPointerUp);
+      delete canvas._clearSignature;
+    };
   }, []);
+
+  const clear = () => {
+    canvasRef.current?._clearSignature?.();
+  };
 
   return (
     <div className="signup-sig-pad">
       <div className="signup-sig-pad-header">
         <span>{label}</span>
-        {hasSignature && <button type="button" onClick={clear}>✕ 다시 서명</button>}
+        {hasSignature && (
+          <button type="button" onClick={clear}>
+            ✕ 다시 서명
+          </button>
+        )}
       </div>
       <canvas
         ref={canvasRef}
         width={400}
-        height={100}
-        onMouseDown={start}
-        onMouseMove={draw}
-        onMouseUp={stop}
-        onMouseLeave={stop}
+        height={120}
         className="signup-sig-canvas"
+        aria-label={label || "서명란"}
       />
-      <p className="signup-sig-hint">마우스 또는 손가락으로 서명해주세요 (자필 서명)</p>
+      <p className="signup-sig-hint">마우스·터치펜·손가락으로 서명해 주세요 (자필 서명)</p>
     </div>
   );
 }
