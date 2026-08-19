@@ -18,9 +18,67 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
+/** PDF/html2canvas용으로 서명을 바로 선 방향으로 다시 그려 PNG로 만듭니다. */
+async function normalizeSignatureForPdf(sig) {
+  if (!sig || typeof sig !== "string") return "";
+  if (!sig.startsWith("data:image") && !/^https?:\/\//i.test(sig)) return sig;
+
+  try {
+    let bitmap = null;
+    if (sig.startsWith("data:image")) {
+      const blob = await (await fetch(sig)).blob();
+      bitmap = await createImageBitmap(blob);
+    } else {
+      const img = await new Promise((resolve, reject) => {
+        const el = new Image();
+        el.crossOrigin = "anonymous";
+        el.onload = () => resolve(el);
+        el.onerror = reject;
+        el.src = sig;
+      });
+      bitmap = img;
+    }
+
+    const srcW = bitmap.naturalWidth || bitmap.width || 1;
+    const srcH = bitmap.naturalHeight || bitmap.height || 1;
+    const maxW = 320;
+    const maxH = 140;
+    const scale = Math.min(1, maxW / srcW, maxH / srcH);
+    const w = Math.max(1, Math.round(srcW * scale));
+    const h = Math.max(1, Math.round(srcH * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return sig;
+
+    // 흰 배경 + 정방향(뒤집힘 방지) 그리기
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    if (typeof bitmap.close === "function") bitmap.close();
+
+    return canvas.toDataURL("image/png");
+  } catch {
+    return sig;
+  }
+}
+
+async function prepareSignupDataForPdf(props) {
+  const base = resolveSignupData(props);
+  const [sig1, sig2] = await Promise.all([
+    normalizeSignatureForPdf(base.sig1),
+    normalizeSignatureForPdf(base.sig2),
+  ]);
+  return { ...base, sig1, sig2 };
+}
+
 function sigImg(sig, alt) {
   if (!sig) return `<span class="doc-sig-ph">(인)</span>`;
-  return `<img src="${sig}" alt="${escapeHtml(alt)}" class="doc-sig-img" />`;
+  // width/height 고정 — object-fit/mm 단위는 html2canvas에서 찌그러지거나 비는 경우가 많음
+  return `<img src="${sig}" alt="${escapeHtml(alt)}" class="doc-sig-img" width="88" height="40" />`;
 }
 
 /** A4 중앙 배치 — 인쇄·PDF 공통 */
@@ -136,18 +194,26 @@ const DOC_STYLES = `
     font-weight: 600;
   }
   .doc-sig-box {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    display: inline-block;
     width: 22mm;
     height: 12mm;
     border: 1px solid #000;
     vertical-align: middle;
+    overflow: hidden;
+    line-height: 0;
+    background: #fff;
   }
   .doc-sig-img {
-    max-width: 20mm;
-    max-height: 11mm;
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
     object-fit: contain;
+    object-position: center;
+    image-orientation: none;
+    transform: none !important;
+    -webkit-transform: none !important;
   }
   .doc-sig-ph {
     color: #666;
@@ -416,6 +482,19 @@ const HTML2CANVAS_OPTS = {
   height: A4_PX_HEIGHT,
   windowWidth: A4_PX_WIDTH,
   windowHeight: A4_PX_HEIGHT,
+  backgroundColor: "#ffffff",
+  imageTimeout: 5000,
+  onclone: (clonedDoc) => {
+    clonedDoc.querySelectorAll(".doc-sig-img").forEach((img) => {
+      img.style.transform = "none";
+      img.style.webkitTransform = "none";
+      img.style.imageOrientation = "none";
+      img.style.objectFit = "contain";
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.removeAttribute("crossorigin");
+    });
+  },
 };
 
 async function captureElementCanvas(element) {
@@ -484,13 +563,19 @@ async function renderHtmlToPdf(html, filename) {
 }
 
 export async function downloadSignupDocumentPdf(props) {
-  const { application, withholding } = resolveSignupData(props);
-  const html = buildCombinedSignupDocumentHtml(props);
-  await renderHtmlToPdf(html, getCombinedFilename(application, withholding));
+  const prepared = await prepareSignupDataForPdf(props);
+  const html = buildCombinedSignupDocumentHtml(prepared);
+  await renderHtmlToPdf(html, getCombinedFilename(prepared.application, prepared.withholding));
 }
 
 export function printSignupDocument(props) {
+  // 인쇄는 동기 API라 정규화 없이 호출될 수 있어, 호출측에서 prepared를 넘기는 것을 권장
   openPrintWindow(buildCombinedSignupDocumentHtml(props));
+}
+
+export async function printSignupDocumentAsync(props) {
+  const prepared = await prepareSignupDataForPdf(props);
+  openPrintWindow(buildCombinedSignupDocumentHtml(prepared));
 }
 
 export function downloadApplicationDocument(props, format = "doc") {
