@@ -150,7 +150,7 @@ export default function App() {
       {/* ── 푸터 ── */}
       <footer className="footer">
         <p>© 2025 고용노동부 전국 직장협의회. All rights reserved.</p>
-        <p className="footer-sub">문의: 소속 지역 직장협의회 | 대표전화 1350</p>
+        <p className="footer-sub">문의: 소속 지역 직장협의회</p>
       </footer>
     </div>
   );
