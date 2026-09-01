@@ -9,6 +9,8 @@ function normalizeApiResult(result) {
     success: Boolean(result.success ?? result.성공),
     submissions: result.submissions ?? result.목록 ?? [],
     submission: result.submission ?? result.신청,
+    posts: result.posts ?? null,
+    service: result.service || result.서비스 || "",
     error: result.error ?? result.오류 ?? result.에러 ?? "",
   };
 }
