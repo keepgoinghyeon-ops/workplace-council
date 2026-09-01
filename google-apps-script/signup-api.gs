@@ -170,13 +170,38 @@ function getSubmissions_() {
     }
     var app = payload.application || payload.member || {};
     var wh = payload.withholding || payload.bank || {};
+
+    var submittedRaw = row[1];
+    var applicationRaw = row[5];
+    var submittedAt = "";
+    var applicationDate = "";
+    var submittedAtMs = 0;
+
+    if (Object.prototype.toString.call(submittedRaw) === "[object Date]" && !isNaN(submittedRaw.getTime())) {
+      submittedAtMs = submittedRaw.getTime();
+      submittedAt = Utilities.formatDate(submittedRaw, "Asia/Seoul", "yyyy. M. d. HH:mm:ss");
+    } else {
+      submittedAt = String(submittedRaw || "");
+      submittedAtMs = parseSignupTime_(submittedAt, "");
+    }
+
+    if (Object.prototype.toString.call(applicationRaw) === "[object Date]" && !isNaN(applicationRaw.getTime())) {
+      applicationDate = Utilities.formatDate(applicationRaw, "Asia/Seoul", "yyyy-MM-dd");
+      if (!submittedAtMs) submittedAtMs = applicationRaw.getTime();
+    } else {
+      applicationDate = String(applicationRaw || "");
+      if (!submittedAtMs) submittedAtMs = parseSignupTime_("", applicationDate);
+    }
+
     list.push({
       id: String(row[0]),
-      submittedAt: String(row[1]),
+      submittedAt: submittedAt,
+      submittedAtMs: submittedAtMs,
+      sheetRow: i + 1,
       name: String(row[2]),
       affiliation: String(row[3]),
       rank: String(row[4]),
-      applicationDate: String(row[5]),
+      applicationDate: applicationDate,
       application: app,
       withholding: wh,
       sig1: payload.sig1 || "",
@@ -184,26 +209,31 @@ function getSubmissions_() {
     });
   }
 
+  // 최신 가입(제출)이 맨 위. 시각이 같으면 시트 아래쪽(나중에 추가된 행) 우선
   list.sort(function (a, b) {
-    // 최신 제출일시가 위로
-    return (
-      parseSignupTime_(b.submittedAt, b.applicationDate) -
-      parseSignupTime_(a.submittedAt, a.applicationDate)
-    );
+    var diff = Number(b.submittedAtMs || 0) - Number(a.submittedAtMs || 0);
+    if (diff !== 0) return diff;
+    return Number(b.sheetRow || 0) - Number(a.sheetRow || 0);
   });
   return list;
 }
 
 /** ko-KR 제출일시 / YYYY-MM-DD 신청일을 밀리초로 변환 (최신순 정렬용) */
 function parseSignupTime_(submittedAt, applicationDate) {
-  var s = String(submittedAt || "").trim();
+  if (typeof submittedAt === "number" && isFinite(submittedAt) && submittedAt > 0) {
+    return submittedAt;
+  }
+  if (Object.prototype.toString.call(submittedAt) === "[object Date]" && !isNaN(submittedAt.getTime())) {
+    return submittedAt.getTime();
+  }
+
+  var s = String(submittedAt || "").replace(/\u00a0/g, " ").trim();
   if (s) {
     var direct = new Date(s);
     if (!isNaN(direct.getTime())) return direct.getTime();
 
-    // 예: 2026. 8. 19. 오후 3:24:05 / 2026. 8. 19. 15:24:05
     var m = s.match(
-      /(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?\s*(오전|오후)?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/
+      /(\d{4})[./-]\s*(\d{1,2})[./-]\s*(\d{1,2})\.?\s*(오전|오후)?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/
     );
     if (m) {
       var y = Number(m[1]);
@@ -217,8 +247,7 @@ function parseSignupTime_(submittedAt, applicationDate) {
       return new Date(y, mo, d, h, mi, sec).getTime();
     }
 
-    // 예: 2026. 8. 19.
-    var dayOnly = s.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+    var dayOnly = s.match(/(\d{4})[./-]\s*(\d{1,2})[./-]\s*(\d{1,2})/);
     if (dayOnly) {
       return new Date(
         Number(dayOnly[1]),
@@ -228,10 +257,14 @@ function parseSignupTime_(submittedAt, applicationDate) {
     }
   }
 
-  var ad = String(applicationDate || "").trim();
+  var ad = String(applicationDate || "").replace(/\u00a0/g, " ").trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(ad)) {
     var parts = ad.split("-");
     return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])).getTime();
+  }
+  var adDot = ad.match(/(\d{4})[./-]\s*(\d{1,2})[./-]\s*(\d{1,2})/);
+  if (adDot) {
+    return new Date(Number(adDot[1]), Number(adDot[2]) - 1, Number(adDot[3])).getTime();
   }
   return 0;
 }

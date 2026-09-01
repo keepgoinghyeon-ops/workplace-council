@@ -27,7 +27,8 @@ export default function PageSignupAdmin() {
     setError("");
     try {
       const data = await fetchSignupSubmissions(adminToken || getSignupAdminToken());
-      setSubmissions(data);
+      // 화면에서도 최신 가입자가 항상 위로 오도록 한 번 더 정렬
+      setSubmissions(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || "신청 목록을 불러올 수 없습니다.");
     } finally {

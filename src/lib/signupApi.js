@@ -268,13 +268,21 @@ export async function verifySignupAdminToken(token) {
 }
 
 function parseSignupListTime(submittedAt, applicationDate) {
-  const s = String(submittedAt || "").trim();
+  if (typeof submittedAt === "number" && Number.isFinite(submittedAt) && submittedAt > 0) {
+    return submittedAt;
+  }
+
+  const s = String(submittedAt || "").trim().replace(/\u00a0/g, " ");
   if (s) {
+    const asNum = Number(s);
+    if (Number.isFinite(asNum) && asNum > 100000000000) return asNum;
+
     const direct = Date.parse(s);
     if (!Number.isNaN(direct)) return direct;
 
+    // 2026. 9. 1. 오후 3:33:00 / 2026. 9. 1. 15:33:00
     const m = s.match(
-      /(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?\s*(오전|오후)?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/
+      /(\d{4})[./-]\s*(\d{1,2})[./-]\s*(\d{1,2})\.?\s*(오전|오후)?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/
     );
     if (m) {
       let h = Number(m[5]);
@@ -290,26 +298,38 @@ function parseSignupListTime(submittedAt, applicationDate) {
       ).getTime();
     }
 
-    const dayOnly = s.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+    // 2026. 9. 1. / 2026-09-01
+    const dayOnly = s.match(/(\d{4})[./-]\s*(\d{1,2})[./-]\s*(\d{1,2})/);
     if (dayOnly) {
       return new Date(Number(dayOnly[1]), Number(dayOnly[2]) - 1, Number(dayOnly[3])).getTime();
     }
   }
 
-  const ad = String(applicationDate || "").trim();
-  if (/^\d{4}-\d{2}-\d{2}/.test(ad)) {
-    const [y, mo, d] = ad.split("-").map(Number);
-    return new Date(y, mo - 1, d).getTime();
+  const ad = String(applicationDate || "").trim().replace(/\u00a0/g, " ");
+  if (!ad) return 0;
+
+  const iso = ad.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3])).getTime();
+
+  const dotted = ad.match(/(\d{4})[./-]\s*(\d{1,2})[./-]\s*(\d{1,2})/);
+  if (dotted) {
+    return new Date(Number(dotted[1]), Number(dotted[2]) - 1, Number(dotted[3])).getTime();
   }
-  return 0;
+
+  const parsedAd = Date.parse(ad);
+  return Number.isNaN(parsedAd) ? 0 : parsedAd;
 }
 
 function sortSignupSubmissionsNewestFirst(list) {
   return [...(list || [])].sort((a, b) => {
-    return (
-      parseSignupListTime(b.submittedAt, b.applicationDate || b.application?.applicationDate) -
-      parseSignupListTime(a.submittedAt, a.applicationDate || a.application?.applicationDate)
-    );
+    const tb =
+      Number(b.submittedAtMs) ||
+      parseSignupListTime(b.submittedAt, b.applicationDate || b.application?.applicationDate);
+    const ta =
+      Number(a.submittedAtMs) ||
+      parseSignupListTime(a.submittedAt, a.applicationDate || a.application?.applicationDate);
+    if (tb !== ta) return tb - ta;
+    return Number(b.sheetRow || 0) - Number(a.sheetRow || 0);
   });
 }
 
