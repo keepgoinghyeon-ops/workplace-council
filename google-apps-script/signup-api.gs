@@ -185,9 +185,55 @@ function getSubmissions_() {
   }
 
   list.sort(function (a, b) {
-    return String(b.submittedAt).localeCompare(String(a.submittedAt));
+    // 최신 제출일시가 위로
+    return (
+      parseSignupTime_(b.submittedAt, b.applicationDate) -
+      parseSignupTime_(a.submittedAt, a.applicationDate)
+    );
   });
   return list;
+}
+
+/** ko-KR 제출일시 / YYYY-MM-DD 신청일을 밀리초로 변환 (최신순 정렬용) */
+function parseSignupTime_(submittedAt, applicationDate) {
+  var s = String(submittedAt || "").trim();
+  if (s) {
+    var direct = new Date(s);
+    if (!isNaN(direct.getTime())) return direct.getTime();
+
+    // 예: 2026. 8. 19. 오후 3:24:05 / 2026. 8. 19. 15:24:05
+    var m = s.match(
+      /(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?\s*(오전|오후)?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/
+    );
+    if (m) {
+      var y = Number(m[1]);
+      var mo = Number(m[2]) - 1;
+      var d = Number(m[3]);
+      var h = Number(m[5]);
+      var mi = Number(m[6]);
+      var sec = Number(m[7] || 0);
+      if (m[4] === "오후" && h < 12) h += 12;
+      if (m[4] === "오전" && h === 12) h = 0;
+      return new Date(y, mo, d, h, mi, sec).getTime();
+    }
+
+    // 예: 2026. 8. 19.
+    var dayOnly = s.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+    if (dayOnly) {
+      return new Date(
+        Number(dayOnly[1]),
+        Number(dayOnly[2]) - 1,
+        Number(dayOnly[3])
+      ).getTime();
+    }
+  }
+
+  var ad = String(applicationDate || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(ad)) {
+    var parts = ad.split("-");
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])).getTime();
+  }
+  return 0;
 }
 
 function createSubmission_(data) {

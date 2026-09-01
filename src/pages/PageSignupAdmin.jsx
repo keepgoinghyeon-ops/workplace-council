@@ -125,7 +125,7 @@ export default function PageSignupAdmin() {
           ) : (
             <>
               <div className="signup-admin-header">
-                <h3>가입신청 목록 ({submissions.length}건)</h3>
+                <h3>가입신청 목록 ({submissions.length}건) · 최신순</h3>
                 <button type="button" className="popup-dismiss" onClick={handleLogout}>로그아웃</button>
               </div>
 

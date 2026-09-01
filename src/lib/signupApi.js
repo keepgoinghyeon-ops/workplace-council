@@ -265,12 +265,65 @@ export async function verifySignupAdminToken(token) {
   return { ok: false, error: "비밀번호가 올바르지 않습니다." };
 }
 
+function parseSignupListTime(submittedAt, applicationDate) {
+  const s = String(submittedAt || "").trim();
+  if (s) {
+    const direct = Date.parse(s);
+    if (!Number.isNaN(direct)) return direct;
+
+    const m = s.match(
+      /(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?\s*(오전|오후)?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/
+    );
+    if (m) {
+      let h = Number(m[5]);
+      if (m[4] === "오후" && h < 12) h += 12;
+      if (m[4] === "오전" && h === 12) h = 0;
+      return new Date(
+        Number(m[1]),
+        Number(m[2]) - 1,
+        Number(m[3]),
+        h,
+        Number(m[6]),
+        Number(m[7] || 0)
+      ).getTime();
+    }
+
+    const dayOnly = s.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+    if (dayOnly) {
+      return new Date(Number(dayOnly[1]), Number(dayOnly[2]) - 1, Number(dayOnly[3])).getTime();
+    }
+  }
+
+  const ad = String(applicationDate || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(ad)) {
+    const [y, mo, d] = ad.split("-").map(Number);
+    return new Date(y, mo - 1, d).getTime();
+  }
+  return 0;
+}
+
+function sortSignupSubmissionsNewestFirst(list) {
+  return [...(list || [])].sort((a, b) => {
+    return (
+      parseSignupListTime(b.submittedAt, b.applicationDate || b.application?.applicationDate) -
+      parseSignupListTime(a.submittedAt, a.applicationDate || a.application?.applicationDate)
+    );
+  });
+}
+
 export async function fetchSignupSubmissions(adminToken) {
   if (API_URL) {
     const result = await apiGet({ action: "list", adminToken: adminToken || getSignupAdminToken() });
-    return result.submissions || [];
+    // board-api가 연결되면 posts만 오고 submissions는 비어 0건처럼 보임 (실제 삭제가 아님)
+    if (result.service === "board-api" || Array.isArray(result.posts)) {
+      throw new Error(
+        "가입신청 관리가 자유게시판(board-api) URL에 연결되어 있습니다. " +
+          "데이터가 삭제된 것이 아닙니다. GitHub Secret VITE_SIGNUP_API_URL을 signup-api.gs 웹 앱(/exec)으로 되돌린 뒤 Pages를 재배포해 주세요."
+      );
+    }
+    return sortSignupSubmissionsNewestFirst(result.submissions || []);
   }
-  return readLocalSubmissions();
+  return sortSignupSubmissionsNewestFirst(readLocalSubmissions());
 }
 
 export async function deleteSignupSubmission(id, adminToken) {
