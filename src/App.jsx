@@ -23,7 +23,7 @@ const NAV_ITEMS = [
   { id: 11, label: "설문 취합" },
 ];
 
-const POPUP_HIDE_KEY = "wc-popup-hide-date";
+const POPUP_HIDE_KEY = "wc-survey-leader-popup-hide-202611";
 const WEBTOON_POPUP_HIDE_KEY = "wc-webtoon-popup-hide";
 
 const getTodayKey = () => {
