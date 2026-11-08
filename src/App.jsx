@@ -77,6 +77,7 @@ export default function App() {
               관리자 역량과 리더십에 대한 의견을 들려주세요.<br />
               베스트·워스트 중 하나만 작성하셔도 됩니다.
             </p>
+            <p className="popup-survey-prize">5명에 한명 씩 추첨하여 커피쿠폰 발송</p>
             <div className="popup-actions">
               <button
                 type="button"

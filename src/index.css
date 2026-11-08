@@ -550,6 +550,13 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.7;
   color: var(--text-soft);
 }
+.popup-survey-prize {
+  margin: 12px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #c62828;
+}
 
 /* ── 오른쪽 롤 패널 ── */
 .side-roll-stack {
