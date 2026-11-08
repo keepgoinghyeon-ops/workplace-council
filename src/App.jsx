@@ -10,7 +10,7 @@ import PageNotices from "./pages/PageNotices";
 import PageSignupAdmin from "./pages/PageSignupAdmin";
 import PageBoard from "./pages/PageBoard";
 import PageSiteAdmin from "./pages/PageSiteAdmin";
-import { DEFAULT_SITE_CONTENT, mergeSiteContent } from "./data/defaultSiteContent";
+import { DEFAULT_SITE_CONTENT, mergeSiteContent, stripPeriodLines } from "./data/defaultSiteContent";
 import { fetchSiteContent } from "./lib/noticesApi";
 import "./index.css";
 
@@ -95,8 +95,8 @@ export default function App() {
               <p className="popup-survey-period">설문기간 {siteContent.popup.period}</p>
             )}
             <p className="popup-survey-desc">
-              {String(siteContent.popup.desc || "").split("\n").map((line, i) => (
-                <span key={i}>{line}{i < String(siteContent.popup.desc || "").split("\n").length - 1 ? <br /> : null}</span>
+              {stripPeriodLines(siteContent.popup.desc).split("\n").map((line, i, arr) => (
+                <span key={i}>{line}{i < arr.length - 1 ? <br /> : null}</span>
               ))}
             </p>
             {siteContent.popup.prize && (

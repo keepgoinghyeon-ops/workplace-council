@@ -98,6 +98,20 @@ export const DEFAULT_SITE_CONTENT = {
   ],
 };
 
+export function stripPeriodLines(text) {
+  return String(text || "")
+    .split("\n")
+    .filter((line) => {
+      const t = line.trim();
+      if (!t) return true;
+      if (/^설문기간\b/.test(t)) return false;
+      if (/^\d{1,2}\s*\.\s*\d{1,2}\s*\.?\s*~\s*\d{1,2}\s*\.\s*\d{1,2}/.test(t)) return false;
+      return true;
+    })
+    .join("\n")
+    .replace(/^\n+|\n+$/g, "");
+}
+
 export function mergeSiteContent(raw) {
   const base = JSON.parse(JSON.stringify(DEFAULT_SITE_CONTENT));
   if (!raw || typeof raw !== "object") return base;
@@ -107,6 +121,13 @@ export function mergeSiteContent(raw) {
   if (raw.survey && typeof raw.survey === "object") {
     base.survey = { ...base.survey, ...raw.survey };
   }
+  const period = String(raw?.popup?.period || raw?.survey?.period || base.popup.period || "").trim();
+  if (period) {
+    base.popup.period = period;
+    base.survey.period = period;
+  }
+  base.popup.desc = stripPeriodLines(base.popup.desc);
+  base.survey.heroDesc = stripPeriodLines(base.survey.heroDesc);
   if (raw.orgAsOf) base.orgAsOf = String(raw.orgAsOf);
   if (Array.isArray(raw.hqExecutives) && raw.hqExecutives.length) {
     base.hqExecutives = raw.hqExecutives.map((e) => ({

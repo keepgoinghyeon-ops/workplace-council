@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { BEST_CRITERIA, WORST_CATEGORIES } from "../data/surveyQuestions";
-import { DEFAULT_SITE_CONTENT, mergeSiteContent } from "../data/defaultSiteContent";
+import { DEFAULT_SITE_CONTENT, mergeSiteContent, stripPeriodLines } from "../data/defaultSiteContent";
 import { fetchSiteContent } from "../lib/noticesApi";
 import { isSurveySubmitConfigured, submitSurvey } from "../lib/surveyApi";
 
@@ -129,7 +129,7 @@ export default function PageSurvey() {
           <h1 style={{ fontSize: "clamp(28px, 5vw, 42px)" }}>{survey.title}</h1>
           <p>
             {survey.period ? <>설문기간 {survey.period}<br /></> : null}
-            <GuideText text={survey.heroDesc} />
+            <GuideText text={stripPeriodLines(survey.heroDesc)} />
             {survey.prize ? <><br />{survey.prize}</> : null}
           </p>
         </div>

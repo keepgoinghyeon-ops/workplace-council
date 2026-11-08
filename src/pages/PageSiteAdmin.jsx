@@ -67,11 +67,23 @@ export default function PageSiteAdmin() {
   };
 
   const updatePopup = (field, value) => {
-    setContent((prev) => ({ ...prev, popup: { ...prev.popup, [field]: value } }));
+    setContent((prev) => {
+      const popup = { ...prev.popup, [field]: value };
+      const survey = field === "period"
+        ? { ...prev.survey, period: value }
+        : prev.survey;
+      return { ...prev, popup, survey };
+    });
   };
 
   const updateSurvey = (field, value) => {
-    setContent((prev) => ({ ...prev, survey: { ...prev.survey, [field]: value } }));
+    setContent((prev) => {
+      const survey = { ...prev.survey, [field]: value };
+      const popup = field === "period"
+        ? { ...prev.popup, period: value }
+        : prev.popup;
+      return { ...prev, popup, survey };
+    });
   };
 
   const updateList = (key, index, field, value) => {
