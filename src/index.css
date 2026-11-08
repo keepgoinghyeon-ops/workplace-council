@@ -518,6 +518,7 @@ a { color: inherit; text-decoration: none; }
   width: min(440px, 92vw);
   padding: 36px 32px 28px;
   text-align: center;
+  animation: none;
 }
 .popup-survey-eyebrow {
   margin: 0 0 10px;

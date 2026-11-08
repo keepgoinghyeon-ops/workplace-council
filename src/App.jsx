@@ -28,7 +28,6 @@ const NAV_ITEMS = [
 ];
 
 const POPUP_HIDE_KEY = "wc-survey-leader-popup-hide-202611";
-const WEBTOON_POPUP_HIDE_KEY = "wc-webtoon-popup-hide";
 
 const getTodayKey = () => {
   const now = new Date();
@@ -40,10 +39,8 @@ const isPopupHiddenToday = () => localStorage.getItem(POPUP_HIDE_KEY) === getTod
 export default function App() {
   const [activePage, setActivePage] = useState(1);
   const [siteContent, setSiteContent] = useState(DEFAULT_SITE_CONTENT);
-  const [contentReady, setContentReady] = useState(false);
-  const [showPopup, setShowPopup] = useState(false);
-  const [showWebtoonPopup, setShowWebtoonPopup] = useState(
-    () => sessionStorage.getItem(WEBTOON_POPUP_HIDE_KEY) !== "1"
+  const [showPopup, setShowPopup] = useState(
+    () => Boolean(DEFAULT_SITE_CONTENT.popup?.enabled) && !isPopupHiddenToday()
   );
 
   useEffect(() => {
@@ -51,39 +48,22 @@ export default function App() {
     (async () => {
       try {
         const raw = await fetchSiteContent();
-        if (!cancelled) setSiteContent(mergeSiteContent(raw));
+        if (cancelled) return;
+        const next = mergeSiteContent(raw);
+        setSiteContent(next);
+        if (!next.popup?.enabled || isPopupHiddenToday()) setShowPopup(false);
       } catch {
         if (!cancelled) setSiteContent(DEFAULT_SITE_CONTENT);
-      } finally {
-        if (!cancelled) setContentReady(true);
       }
     })();
     return () => { cancelled = true; };
   }, []);
-
-  useEffect(() => {
-    if (!contentReady) return;
-    if (!siteContent.popup?.enabled) return;
-    if (isPopupHiddenToday()) return;
-    const timer = setTimeout(() => setShowPopup(true), 600);
-    return () => clearTimeout(timer);
-  }, [contentReady, siteContent.popup?.enabled, siteContent.popup?.title, siteContent.popup?.period]);
 
   const closePopup = () => setShowPopup(false);
 
   const dismissPopupToday = () => {
     localStorage.setItem(POPUP_HIDE_KEY, getTodayKey());
     closePopup();
-  };
-
-  const closeWebtoonPopup = () => {
-    sessionStorage.setItem(WEBTOON_POPUP_HIDE_KEY, "1");
-    setShowWebtoonPopup(false);
-  };
-
-  const goToWebtoon = () => {
-    setActivePage(5);
-    closeWebtoonPopup();
   };
 
   return (
@@ -122,24 +102,6 @@ export default function App() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* ── 오른쪽 롤 패널 (웹툰) ── */}
-      {showWebtoonPopup && activePage !== 5 && (
-        <aside className="side-roll-stack" aria-label="안내 패널">
-          <div className="side-roll-panel side-roll-panel--webtoon">
-            <div className="side-roll-panel-head">
-              <span>✨ 직협 웹툰</span>
-              <button type="button" className="side-roll-close" onClick={closeWebtoonPopup} aria-label="닫기">✕</button>
-            </div>
-            <div className="side-roll-panel-body">
-              <p className="side-roll-desc">직장협의회 이야기를 만화로 만나보세요!</p>
-              <button type="button" className="side-roll-cta side-roll-cta--webtoon" onClick={goToWebtoon}>
-                웹툰 보러가기 →
-              </button>
-            </div>
-          </div>
-        </aside>
       )}
 
       {/* ── 헤더 ── */}
