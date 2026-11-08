@@ -129,18 +129,28 @@ async function apiRequest(payload) {
   return normalized;
 }
 
+export const SITE_CONTENT_NOTICE_TITLE = "__WC_SITE_CONTENT__";
+
+function isSiteContentNotice(notice) {
+  return String(notice?.title || "") === SITE_CONTENT_NOTICE_TITLE;
+}
+
+function publicNotices(list) {
+  return (list || []).filter((n) => !isSiteContentNotice(n));
+}
+
 export async function fetchNotices() {
   if (API_URL) {
     try {
       const result = await apiGet({ action: "list" });
       if (!result.success) throw new Error(result.error || "공지사항을 불러올 수 없습니다.");
-      return result.notices || [];
+      return publicNotices(result.notices);
     } catch (err) {
       throw normalizeNetworkError(err);
     }
   }
 
-  return readLocalNotices().sort((a, b) => {
+  return publicNotices(readLocalNotices()).sort((a, b) => {
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
     return String(b.createdAt).localeCompare(String(a.createdAt));
   });
@@ -243,32 +253,102 @@ function writeLocalSiteContent(content) {
   localStorage.setItem(SITE_CONTENT_KEY, JSON.stringify(content));
 }
 
+function parseSiteContentNotice(notice) {
+  if (!notice) return null;
+  try {
+    const parsed = JSON.parse(notice.content || "");
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchSiteContentFromNotices() {
+  const result = await apiGet({ action: "list" });
+  if (!result.success) throw new Error(result.error || "공지사항을 불러올 수 없습니다.");
+  const hidden = (result.notices || []).find(isSiteContentNotice);
+  return parseSiteContentNotice(hidden);
+}
+
+async function saveSiteContentViaNotice(content, adminToken) {
+  const result = await apiGet({ action: "list" });
+  const existing = (result.notices || []).filter(isSiteContentNotice);
+  for (const notice of existing) {
+    if (notice.id) {
+      await apiRequest({ action: "delete", adminToken, id: notice.id });
+    }
+  }
+  await apiRequest({
+    action: "create",
+    adminToken,
+    title: SITE_CONTENT_NOTICE_TITLE,
+    category: "공지",
+    content: JSON.stringify(content),
+    pinned: false,
+    files: [],
+  });
+  return content;
+}
+
 export async function fetchSiteContent() {
   if (API_URL) {
     try {
       const result = await apiGet({ action: "siteContent" });
-      if (!result.success) throw new Error(result.error || "홈페이지 내용을 불러올 수 없습니다.");
-      if (result.content) writeLocalSiteContent(result.content);
-      return result.content || null;
+      if (result.success) {
+        if (result.content) writeLocalSiteContent(result.content);
+        if (result.content) return result.content;
+      }
+      if (result.error && !/unknown action/i.test(result.error)) {
+        throw new Error(result.error);
+      }
     } catch (err) {
-      const cached = readLocalSiteContent();
-      if (cached) return cached;
-      if (/unknown action/i.test(err.message || "")) return readLocalSiteContent();
-      throw normalizeNetworkError(err);
+      if (!/unknown action/i.test(err.message || "")) {
+        const cached = readLocalSiteContent();
+        if (cached) return cached;
+        try {
+          const fromNotice = await fetchSiteContentFromNotices();
+          if (fromNotice) {
+            writeLocalSiteContent(fromNotice);
+            return fromNotice;
+          }
+        } catch {
+          /* fall through */
+        }
+        throw normalizeNetworkError(err);
+      }
     }
+
+    try {
+      const fromNotice = await fetchSiteContentFromNotices();
+      if (fromNotice) {
+        writeLocalSiteContent(fromNotice);
+        return fromNotice;
+      }
+    } catch {
+      /* ignore */
+    }
+    return readLocalSiteContent();
   }
   return readLocalSiteContent();
 }
 
 export async function saveSiteContent(content, adminToken) {
   if (API_URL) {
-    const result = await apiRequest({
-      action: "saveSiteContent",
-      adminToken,
-      content,
-    });
-    if (result.content) writeLocalSiteContent(result.content);
-    return result.content;
+    try {
+      const result = await apiRequest({
+        action: "saveSiteContent",
+        adminToken,
+        content,
+      });
+      const saved = result.content || content;
+      writeLocalSiteContent(saved);
+      return saved;
+    } catch (err) {
+      if (!/unknown action/i.test(err.message || "")) throw err;
+      const saved = await saveSiteContentViaNotice(content, adminToken);
+      writeLocalSiteContent(saved);
+      return saved;
+    }
   }
   writeLocalSiteContent(content);
   return content;

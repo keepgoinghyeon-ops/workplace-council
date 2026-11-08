@@ -23,6 +23,16 @@ export const DEFAULT_SITE_CONTENT = {
     ctaLabel: "설문 참여하기 →",
     ctaPage: 6,
   },
+  survey: {
+    eyebrow: "고용노동부 베스트·워스트 관리자 선정",
+    title: "여러분의 리더를 추천해주세요.",
+    period: "11.16.~11.27",
+    heroDesc: "관리자 역량과 리더십에 대한 직원 의견을 수렴하여\n베스트 사례를 공유하고, 워스트 사례를 개선하기 위한 설문입니다.",
+    purpose: "본 설문은 고용노동부 직원들의 관리자 역량과 리더십에 대한 의견을 수렴하여 베스트(Best) 사례를 공유하고, 워스트(Worst) 사례를 파악·개선하기 위한 목적으로 실시합니다.",
+    instruction: "베스트·워스트 평가는 **둘 중 하나만** 작성하셔도 되며, 항목별 빈칸은 비워 두셔도 제출할 수 있습니다.",
+    privacyNotice: "중복설문(한명의 리더를 한명의 설문자가 다른 내용으로 중복 설문 불가, 한명이 여러명의 리더를 설문하는 거은 가능)을 방지하고, 추첨 이벤트 당첨 선물 문자 발송을 위하여 성명, 연락처를 받고 있습니다. 취합 관리자는 비밀을 유지하고 익명을 보장합니다.",
+    prize: "5명에 한명 씩 추첨하여 커피쿠폰 발송",
+  },
   orgAsOf: "2026.10.15",
   hqExecutives: [
     { role: "의장", name: "김동식" },
@@ -93,6 +103,9 @@ export function mergeSiteContent(raw) {
   if (!raw || typeof raw !== "object") return base;
   if (raw.popup && typeof raw.popup === "object") {
     base.popup = { ...base.popup, ...raw.popup };
+  }
+  if (raw.survey && typeof raw.survey === "object") {
+    base.survey = { ...base.survey, ...raw.survey };
   }
   if (raw.orgAsOf) base.orgAsOf = String(raw.orgAsOf);
   if (Array.isArray(raw.hqExecutives) && raw.hqExecutives.length) {

@@ -70,6 +70,10 @@ export default function PageSiteAdmin() {
     setContent((prev) => ({ ...prev, popup: { ...prev.popup, [field]: value } }));
   };
 
+  const updateSurvey = (field, value) => {
+    setContent((prev) => ({ ...prev, survey: { ...prev.survey, [field]: value } }));
+  };
+
   const updateList = (key, index, field, value) => {
     setContent((prev) => {
       const next = [...(prev[key] || [])];
@@ -96,13 +100,9 @@ export default function PageSiteAdmin() {
     try {
       const saved = await saveSiteContent(content, adminToken || getAdminToken());
       setContent(mergeSiteContent(saved));
-      setMessage("저장했습니다. 홈페이지에 바로 반영됩니다. (팝업을 바꿨다면 방문자는 새로고침 후 보입니다)");
+      setMessage("저장했습니다. 홈페이지에 바로 반영됩니다. (팝업·설문 안내를 바꿨다면 방문자는 새로고침 후 보입니다)");
     } catch (err) {
-      if (/unknown action/i.test(err.message || "")) {
-        setError("공지사항 Apps Script에 최신 notices-api.gs를 붙여넣고 웹 앱을 새 버전으로 재배포해 주세요.");
-      } else {
-        setError(err.message || "저장에 실패했습니다.");
-      }
+      setError(err.message || "저장에 실패했습니다.");
     } finally {
       setSaving(false);
     }
@@ -114,7 +114,7 @@ export default function PageSiteAdmin() {
         <div className="hero-inner">
           <div className="hero-eyebrow">운영</div>
           <h1>홈페이지 관리</h1>
-          <p>설문 팝업·본조 운영진·단위직협 임원현황을 수정할 수 있습니다.</p>
+          <p>설문 팝업·설문 안내·본조 운영진·단위직협 임원현황을 수정할 수 있습니다.</p>
         </div>
       </section>
 
@@ -148,6 +148,7 @@ export default function PageSiteAdmin() {
                   <div className="site-admin-tabs">
                     {[
                       ["popup", "설문 팝업"],
+                      ["survey", "설문 안내"],
                       ["hq", "본조 운영진"],
                       ["org", "임원현황"],
                     ].map(([id, label]) => (
@@ -186,6 +187,28 @@ export default function PageSiteAdmin() {
                     <input className="form-input" value={content.popup?.prize || ""} onChange={(e) => updatePopup("prize", e.target.value)} />
                     <label className="form-label">버튼 글씨</label>
                     <input className="form-input" value={content.popup?.ctaLabel || ""} onChange={(e) => updatePopup("ctaLabel", e.target.value)} />
+                  </div>
+                )}
+
+                {tab === "survey" && (
+                  <div className="board-form">
+                    <p className="form-sub">베스트·워스트 설문 페이지 상단과 안내 문구입니다. 줄바꿈은 그대로 반영됩니다. 강조는 **이렇게** 쓰면 됩니다.</p>
+                    <label className="form-label">상단 작은 제목</label>
+                    <input className="form-input" value={content.survey?.eyebrow || ""} onChange={(e) => updateSurvey("eyebrow", e.target.value)} />
+                    <label className="form-label">제목</label>
+                    <input className="form-input" value={content.survey?.title || ""} onChange={(e) => updateSurvey("title", e.target.value)} />
+                    <label className="form-label">설문기간</label>
+                    <input className="form-input" value={content.survey?.period || ""} onChange={(e) => updateSurvey("period", e.target.value)} />
+                    <label className="form-label">상단 안내 문구</label>
+                    <textarea className="form-textarea" rows={4} value={content.survey?.heroDesc || ""} onChange={(e) => updateSurvey("heroDesc", e.target.value)} />
+                    <label className="form-label">추첨·혜택 문구</label>
+                    <input className="form-input" value={content.survey?.prize || ""} onChange={(e) => updateSurvey("prize", e.target.value)} />
+                    <label className="form-label">설문 목적</label>
+                    <textarea className="form-textarea" rows={5} value={content.survey?.purpose || ""} onChange={(e) => updateSurvey("purpose", e.target.value)} />
+                    <label className="form-label">작성 안내 (하나만 작성해도 된다는 안내 등)</label>
+                    <textarea className="form-textarea" rows={3} value={content.survey?.instruction || ""} onChange={(e) => updateSurvey("instruction", e.target.value)} />
+                    <label className="form-label">성명·연락처 수집 안내</label>
+                    <textarea className="form-textarea" rows={5} value={content.survey?.privacyNotice || ""} onChange={(e) => updateSurvey("privacyNotice", e.target.value)} />
                   </div>
                 )}
 

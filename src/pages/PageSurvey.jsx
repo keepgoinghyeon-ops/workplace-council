@@ -1,6 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BEST_CRITERIA, WORST_CATEGORIES } from "../data/surveyQuestions";
+import { DEFAULT_SITE_CONTENT, mergeSiteContent } from "../data/defaultSiteContent";
+import { fetchSiteContent } from "../lib/noticesApi";
 import { isSurveySubmitConfigured, submitSurvey } from "../lib/surveyApi";
+
+function GuideText({ text }) {
+  const lines = String(text || "").split("\n");
+  return lines.map((line, i) => (
+    <span key={i}>
+      {line.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
+        /^\*\*[^*]+\*\*$/.test(part)
+          ? <strong key={j}>{part.slice(2, -2)}</strong>
+          : part
+      )}
+      {i < lines.length - 1 ? <br /> : null}
+    </span>
+  ));
+}
 
 const emptyForm = () => ({
   submitterName: "",
@@ -19,6 +35,20 @@ export default function PageSurvey() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [survey, setSurvey] = useState(DEFAULT_SITE_CONTENT.survey);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = await fetchSiteContent();
+        if (!cancelled) setSurvey(mergeSiteContent(raw).survey);
+      } catch {
+        if (!cancelled) setSurvey(DEFAULT_SITE_CONTENT.survey);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const toggleBest = (id) => {
     setForm((prev) => ({
@@ -95,12 +125,12 @@ export default function PageSurvey() {
     <>
       <section className="hero">
         <div className="hero-inner">
-          <div className="hero-eyebrow">고용노동부 베스트·워스트 관리자 선정</div>
-          <h1 style={{ fontSize: "clamp(28px, 5vw, 42px)" }}>여러분의 리더를 추천해주세요.</h1>
+          <div className="hero-eyebrow">{survey.eyebrow}</div>
+          <h1 style={{ fontSize: "clamp(28px, 5vw, 42px)" }}>{survey.title}</h1>
           <p>
-            설문기간 11.16.~11.27<br />
-            관리자 역량과 리더십에 대한 직원 의견을 수렴하여<br />
-            베스트 사례를 공유하고, 워스트 사례를 개선하기 위한 설문입니다.
+            {survey.period ? <>설문기간 {survey.period}<br /></> : null}
+            <GuideText text={survey.heroDesc} />
+            {survey.prize ? <><br />{survey.prize}</> : null}
           </p>
         </div>
       </section>
@@ -116,20 +146,19 @@ export default function PageSurvey() {
 
             <div className="survey-purpose">
               <h3>1. 설문 목적</h3>
-              <p>
-                본 설문은 고용노동부 직원들의 관리자 역량과 리더십에 대한 의견을 수렴하여
-                베스트(Best) 사례를 공유하고, 워스트(Worst) 사례를 파악·개선하기 위한 목적으로 실시합니다.
-              </p>
-              <p className="survey-instruction" style={{ marginTop: 12 }}>
-                베스트·워스트 평가는 <strong>둘 중 하나만</strong> 작성하셔도 되며, 항목별 빈칸은 비워 두셔도 제출할 수 있습니다.
-              </p>
+              <p><GuideText text={survey.purpose} /></p>
+              {survey.instruction && (
+                <p className="survey-instruction" style={{ marginTop: 12 }}>
+                  <GuideText text={survey.instruction} />
+                </p>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className="survey-form">
               <div className="survey-section">
                 <h3>2. 제출자 정보</h3>
                 <p className="survey-privacy-notice">
-                  중복설문(한명의 리더를 한명의 설문자가 다른 내용으로 중복 설문 불가, 한명이 여러명의 리더를 설문하는 거은 가능)을 방지하고, 추첨 이벤트 당첨 선물 문자 발송을 위하여 성명, 연락처를 받고 있습니다. 취합 관리자는 비밀을 유지하고 익명을 보장합니다.
+                  <GuideText text={survey.privacyNotice} />
                 </p>
                 <div className="form-group">
                   <label className="form-label">성명 <span className="form-required">*</span></label>
