@@ -96,8 +96,9 @@ export default function PageSurvey() {
       <section className="hero">
         <div className="hero-inner">
           <div className="hero-eyebrow">고용노동부 베스트·워스트 관리자 선정</div>
-          <h1 style={{ fontSize: "clamp(28px, 5vw, 42px)" }}>설문지</h1>
+          <h1 style={{ fontSize: "clamp(28px, 5vw, 42px)" }}>여러분의 리더를 추천해주세요.</h1>
           <p>
+            설문기간 11.16.~11.27<br />
             관리자 역량과 리더십에 대한 직원 의견을 수렴하여<br />
             베스트 사례를 공유하고, 워스트 사례를 개선하기 위한 설문입니다.
           </p>
