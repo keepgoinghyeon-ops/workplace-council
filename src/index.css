@@ -557,6 +557,30 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.5;
   color: #c62828;
 }
+.site-admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.site-admin-row,
+.site-admin-grid {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+.site-admin-row {
+  grid-template-columns: 1fr 1fr auto;
+}
+.site-admin-grid {
+  grid-template-columns: 140px 1fr 1fr 1fr 1fr 1fr auto;
+}
+@media (max-width: 900px) {
+  .site-admin-row,
+  .site-admin-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* ── 오른쪽 롤 패널 ── */
 .side-roll-stack {

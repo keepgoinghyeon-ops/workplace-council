@@ -66,6 +66,7 @@ function normalizeApiResult(result) {
     success: Boolean(result.success ?? result.성공),
     notices: result.notices ?? result.알림 ?? [],
     notice: result.notice ?? result.공지,
+    content: result.content ?? result.내용 ?? null,
     error: result.error ?? result.오류 ?? result.에러 ?? "",
   };
 }
@@ -226,4 +227,49 @@ export async function deleteNotice(id, adminToken) {
   }
 
   writeLocalNotices(readLocalNotices().filter((n) => n.id !== id));
+}
+
+const SITE_CONTENT_KEY = "wc-site-content";
+
+function readLocalSiteContent() {
+  try {
+    return JSON.parse(localStorage.getItem(SITE_CONTENT_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalSiteContent(content) {
+  localStorage.setItem(SITE_CONTENT_KEY, JSON.stringify(content));
+}
+
+export async function fetchSiteContent() {
+  if (API_URL) {
+    try {
+      const result = await apiGet({ action: "siteContent" });
+      if (!result.success) throw new Error(result.error || "홈페이지 내용을 불러올 수 없습니다.");
+      if (result.content) writeLocalSiteContent(result.content);
+      return result.content || null;
+    } catch (err) {
+      const cached = readLocalSiteContent();
+      if (cached) return cached;
+      if (/unknown action/i.test(err.message || "")) return readLocalSiteContent();
+      throw normalizeNetworkError(err);
+    }
+  }
+  return readLocalSiteContent();
+}
+
+export async function saveSiteContent(content, adminToken) {
+  if (API_URL) {
+    const result = await apiRequest({
+      action: "saveSiteContent",
+      adminToken,
+      content,
+    });
+    if (result.content) writeLocalSiteContent(result.content);
+    return result.content;
+  }
+  writeLocalSiteContent(content);
+  return content;
 }

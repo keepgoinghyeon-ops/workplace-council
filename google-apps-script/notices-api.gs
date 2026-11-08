@@ -5,7 +5,8 @@
  * 1. Google 스프레드시트 생성 → Apps Script에 이 코드 붙여넣기
  * 2. 프로젝트 설정 → 스크립트 속성 추가:
  *    NOTICES_ADMIN_TOKEN = 운영진 비밀번호 (예: jikhyp2025!)
- * 3. setupNoticesSheet() 실행
+ * 3. setupNoticesSheet() 실행 (기존 공지 데이터가 있으면 실행하지 마세요)
+ * 3b. ensureSiteContentSheet() 실행 — 홈페이지 관리(팝업·임원현황)
  * 4. setupDriveFolder() 실행
  * 5. 웹 앱 배포 (모든 사용자) → URL을 .env에 설정
  *    VITE_NOTICES_API_URL=https://script.google.com/macros/s/....../exec
@@ -150,6 +151,62 @@ function createNotice_(data) {
   };
 }
 
+var SITE_SHEET = "홈페이지내용";
+var SITE_HEADERS = ["키", "값JSON"];
+var SITE_KEY = "siteContent";
+
+function ensureSiteContentSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SITE_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(SITE_SHEET);
+    sheet.getRange(1, 1, 1, SITE_HEADERS.length).setValues([SITE_HEADERS]);
+    sheet.getRange(1, 1, 1, SITE_HEADERS.length).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+    return "홈페이지내용 시트를 만들었습니다.";
+  }
+  return "홈페이지내용 시트 확인 완료.";
+}
+
+function getSiteSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SITE_SHEET);
+  if (!sheet) {
+    ensureSiteContentSheet();
+    sheet = ss.getSheetByName(SITE_SHEET);
+  }
+  return sheet;
+}
+
+function getSiteContent_() {
+  var sheet = getSiteSheet_();
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === SITE_KEY) {
+      try {
+        return JSON.parse(data[i][1] || "{}");
+      } catch (e) {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
+function saveSiteContent_(content) {
+  var sheet = getSiteSheet_();
+  var json = JSON.stringify(content || {});
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === SITE_KEY) {
+      sheet.getRange(i + 1, 2).setValue(json);
+      return content;
+    }
+  }
+  sheet.appendRow([SITE_KEY, json]);
+  return content;
+}
+
 function deleteNotice_(id) {
   var sheet = getNoticesSheet_();
   var data = sheet.getDataRange().getValues();
@@ -173,6 +230,9 @@ function doGet(e) {
         success: auth.ok,
         error: auth.error || "",
       });
+    }
+    if (action === "siteContent") {
+      return jsonResponse({ success: true, content: getSiteContent_() });
     }
     return jsonResponse({ success: false, error: "unknown action" });
   } catch (err) {
@@ -205,6 +265,11 @@ function doPost(e) {
       if (!data.id) return jsonResponse({ success: false, error: "ID가 없습니다." });
       deleteNotice_(data.id);
       return jsonResponse({ success: true });
+    }
+
+    if (action === "saveSiteContent") {
+      var saved = saveSiteContent_(data.content || {});
+      return jsonResponse({ success: true, content: saved });
     }
 
     return jsonResponse({ success: false, error: "unknown action" });

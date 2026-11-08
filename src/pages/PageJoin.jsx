@@ -1,90 +1,6 @@
-// ✅ 실제 임원현황 데이터 (2026.10.15 기준)
-
-const HQ_EXECUTIVES = [
-  { role: "의장", name: "김동식", region: "본조 운영진" },
-  { role: "부의장", name: "양지현", region: "본조 운영진" },
-  { role: "사무국장", name: "임현호", region: "본조 운영진" },
-  { role: "총무1국장", name: "양일준", region: "본조 운영진" },
-];
-
-const HQ_UNIT = [
-  { unit: "본부", president: "공석", vp: "허균", secretary: "김정혜", etc: "염보라" },
-];
-
-const BRANCHES = [
-  // 서울청
-  { region: "서울청", unit: "서울청", president: "공석", vp: "", secretary: "", etc: "" },
-  { region: "서울청", unit: "서울강남", president: "조성웅", vp: "", secretary: "김하림", etc: "" },
-  { region: "서울청", unit: "서울동부", president: "이예준", vp: "", secretary: "전예린", etc: "" },
-  { region: "서울청", unit: "서울서부", president: "김혜성", vp: "", secretary: "", etc: "" },
-  { region: "서울청", unit: "서울남부", president: "김응년", vp: "", secretary: "박수지", etc: "" },
-  { region: "서울청", unit: "서울북부", president: "김성원", vp: "", secretary: "김태완", etc: "" },
-  { region: "서울청", unit: "서울관악", president: "이창호", vp: "", secretary: "", etc: "" },
-  // 중부청
-  { region: "중부청", unit: "중부청", president: "우승완(휴직)", vp: "", secretary: "최태석", etc: "" },
-  { region: "중부청", unit: "인천북부", president: "박태용", vp: "", secretary: "", etc: "" },
-  { region: "중부청", unit: "부천", president: "김영배", vp: "", secretary: "박지후", etc: "" },
-  // 강원
-  { region: "강원", unit: "강원(춘천)", president: "공석", vp: "", secretary: "손승태", etc: "" },
-  { region: "강원", unit: "강릉", president: "박주화", vp: "", secretary: "한현규", etc: "" },
-  { region: "강원", unit: "원주", president: "이경록", vp: "", secretary: "박동선", etc: "" },
-  { region: "강원", unit: "태백", president: "김민수", vp: "", secretary: "배민기", etc: "" },
-  { region: "강원", unit: "영월", president: "", vp: "", secretary: "나유진", etc: "" },
-  // 경기청
-  { region: "경기청", unit: "경기청", president: "홍순규", vp: "", secretary: "이준현", etc: "" },
-  { region: "경기청", unit: "성남", president: "황병의", vp: "조영환", secretary: "김벼리", etc: "박범우(감사)" },
-  { region: "경기청", unit: "안양", president: "정윤순", vp: "", secretary: "공석", etc: "서동환" },
-  { region: "경기청", unit: "안산", president: "공석", vp: "", secretary: "김민석", etc: "" },
-  { region: "경기청", unit: "의정부", president: "공석", vp: "박해룡", secretary: "최수빈", etc: "" },
-  { region: "경기청", unit: "고양", president: "배정돈", vp: "", secretary: "장승식", etc: "" },
-  { region: "경기청", unit: "평택", president: "김만수", vp: "", secretary: "공석", etc: "" },
-  // 부산청
-  { region: "부산청", unit: "부산청", president: "공석", vp: "공현도", secretary: "김명진", etc: "김근아" },
-  { region: "부산청", unit: "부산동부", president: "공석", vp: "", secretary: "유병욱", etc: "" },
-  { region: "부산청", unit: "부산북부", president: "공석", vp: "", secretary: "", etc: "" },
-  { region: "부산청", unit: "창원", president: "최재원", vp: "", secretary: "윤신희", etc: "" },
-  { region: "부산청", unit: "울산", president: "공석", vp: "", secretary: "", etc: "박준" },
-  { region: "부산청", unit: "울산동부", president: "전혜현", vp: "", secretary: "", etc: "" },
-  { region: "부산청", unit: "양산", president: "공석", vp: "", secretary: "김병학", etc: "" },
-  { region: "부산청", unit: "진주", president: "유재화", vp: "", secretary: "", etc: "박찬곤(총무)" },
-  { region: "부산청", unit: "통영", president: "이영란", vp: "", secretary: "서성봉", etc: "김은정" },
-  // 대구청
-  { region: "대구청", unit: "대구청", president: "박준모", vp: "", secretary: "김다진", etc: "김대웅" },
-  { region: "대구청", unit: "대구서부", president: "김동식", vp: "", secretary: "도동화", etc: "임성현" },
-  { region: "대구청", unit: "포항", president: "변진기", vp: "", secretary: "한명혜", etc: "" },
-  { region: "대구청", unit: "구미", president: "신광철", vp: "", secretary: "김승형", etc: "윤진건" },
-  { region: "대구청", unit: "영주", president: "공석", vp: "", secretary: "조성일", etc: "" },
-  { region: "대구청", unit: "안동", president: "공석", vp: "", secretary: "공석", etc: "" },
-  // 대전청
-  { region: "대전청", unit: "대전청", president: "이용구", vp: "", secretary: "박재현", etc: "" },
-  { region: "대전청", unit: "청주", president: "양일준", vp: "", secretary: "허한강", etc: "" },
-  { region: "대전청", unit: "천안", president: "복기연", vp: "전봉기", secretary: "", etc: "" },
-  { region: "대전청", unit: "충주", president: "장윤석", vp: "", secretary: "나종남", etc: "" },
-  { region: "대전청", unit: "보령", president: "이승기", vp: "", secretary: "이혜원", etc: "" },
-  { region: "대전청", unit: "서산", president: "김기선", vp: "", secretary: "김경주", etc: "" },
-  // 노동위원회
-  { region: "노동위원회", unit: "중노위", president: "공석", vp: "", secretary: "이지형", etc: "" },
-  { region: "노동위원회", unit: "서울지노위", president: "신상돈", vp: "", secretary: "최서현", etc: "" },
-  { region: "노동위원회", unit: "부산지노위", president: "공석", vp: "", secretary: "공석", etc: "" },
-  { region: "노동위원회", unit: "충남지노위", president: "공석", vp: "김춘숙", secretary: "신재현", etc: "이은규(총무)" },
-  { region: "노동위원회", unit: "충북지노위", president: "이학진", vp: "", secretary: "", etc: "" },
-  { region: "노동위원회", unit: "경북지노위", president: "김상현", vp: "이정주", secretary: "", etc: "" },
-  // 기타기관
-  { region: "기타기관", unit: "산심위", president: "김성경", vp: "전재영", secretary: "도경환", etc: "이지은(감사)" },
-  { region: "기타기관", unit: "고객상담센터", president: "정명화", vp: "", secretary: "", etc: "황현지(총무)" },
-];
-
-const REGION_COLORS = {
-  "서울청": "#1557a0",
-  "중부청": "#0d6e4f",
-  "강원": "#5b3ea8",
-  "경기청": "#c47d0a",
-  "부산청": "#b53a2a",
-  "대구청": "#1a7a6e",
-  "대전청": "#2e5fa3",
-  "노동위원회": "#6b3a8a",
-  "기타기관": "#4a5568",
-};
+import { useEffect, useState } from "react";
+import { DEFAULT_SITE_CONTENT, REGION_COLORS, mergeSiteContent } from "../data/defaultSiteContent";
+import { fetchSiteContent } from "../lib/noticesApi";
 
 const JOIN_STEPS = [
   { title: "자격 확인", desc: "고용노동부 본부, 지방노동관서, 노동위원회 등 소속 공무원이면 누구나 가입 가능합니다." },
@@ -94,7 +10,6 @@ const JOIN_STEPS = [
   { title: "회원 활동 시작", desc: "소송비용·경조사·질병 지원 등 각종 회원 혜택을 바로 이용하실 수 있습니다." },
 ];
 
-// 지역별로 그룹핑
 const groupByRegion = (data) => {
   return data.reduce((acc, row) => {
     if (!acc[row.region]) acc[row.region] = [];
@@ -104,11 +19,28 @@ const groupByRegion = (data) => {
 };
 
 export default function PageJoin() {
-  const grouped = groupByRegion(BRANCHES);
+  const [content, setContent] = useState(DEFAULT_SITE_CONTENT);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = await fetchSiteContent();
+        if (!cancelled) setContent(mergeSiteContent(raw));
+      } catch {
+        if (!cancelled) setContent(DEFAULT_SITE_CONTENT);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const hqExecutives = content.hqExecutives || [];
+  const hqUnit = content.hqUnit || [];
+  const branches = content.branches || [];
+  const grouped = groupByRegion(branches);
 
   return (
     <>
-      {/* 히어로 */}
       <section className="hero">
         <div className="hero-eyebrow">가입 안내 & 조직</div>
         <h1>직장협의회와 함께하세요</h1>
@@ -118,7 +50,6 @@ export default function PageJoin() {
         </p>
       </section>
 
-      {/* 가입 절차 */}
       <section className="section section-alt">
         <div className="container">
           <div className="section-header">
@@ -139,7 +70,6 @@ export default function PageJoin() {
         </div>
       </section>
 
-      {/* 본조 운영진 */}
       <section className="section">
         <div className="container">
           <div className="section-header">
@@ -147,7 +77,7 @@ export default function PageJoin() {
             <p className="section-sub">전국 직장협의회 본조 대표 임원진입니다.</p>
           </div>
           <div className="card-grid card-grid-4" style={{ maxWidth: 860, margin: "0 auto 40px" }}>
-            {HQ_EXECUTIVES.map((e, i) => (
+            {hqExecutives.map((e, i) => (
               <div key={i} className="card card-accent" style={{ textAlign: "center", padding: "24px 16px" }}>
                 <div style={{ fontSize: 32, marginBottom: 10 }}>
                   {i === 0 ? "👑" : i === 1 ? "🌟" : i === 2 ? "📋" : "📌"}
@@ -160,15 +90,13 @@ export default function PageJoin() {
         </div>
       </section>
 
-      {/* 지역별 단위직협 */}
       <section className="section section-alt">
         <div className="container">
           <div className="section-header">
             <h2 className="section-title">전국 단위직협 임원현황</h2>
-            <p className="section-sub">2026.10.15 기준 · 총 {BRANCHES.length}개 단위직협</p>
+            <p className="section-sub">{content.orgAsOf} 기준 · 총 {branches.length}개 단위직협</p>
           </div>
 
-          {/* 본부 단위직협 현황 */}
           <div style={{ marginBottom: 40 }}>
             <div style={{
               display: "inline-flex", alignItems: "center", gap: 8,
@@ -191,7 +119,7 @@ export default function PageJoin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {HQ_UNIT.map((r, i) => (
+                  {hqUnit.map((r, i) => (
                     <tr key={i}>
                       <td><span className="badge-hq">{r.unit}</span></td>
                       <td style={{ fontWeight: 700 }}>{r.president}</td>
@@ -207,7 +135,6 @@ export default function PageJoin() {
 
           {Object.entries(grouped).map(([region, rows]) => (
             <div key={region} style={{ marginBottom: 40 }}>
-              {/* 지역 헤더 */}
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 background: REGION_COLORS[region] || "var(--navy)",

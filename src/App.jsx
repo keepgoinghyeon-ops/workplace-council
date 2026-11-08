@@ -9,6 +9,9 @@ import PageSurveyAdmin from "./pages/PageSurveyAdmin";
 import PageNotices from "./pages/PageNotices";
 import PageSignupAdmin from "./pages/PageSignupAdmin";
 import PageBoard from "./pages/PageBoard";
+import PageSiteAdmin from "./pages/PageSiteAdmin";
+import { DEFAULT_SITE_CONTENT, mergeSiteContent } from "./data/defaultSiteContent";
+import { fetchSiteContent } from "./lib/noticesApi";
 import "./index.css";
 
 const NAV_ITEMS = [
@@ -21,6 +24,7 @@ const NAV_ITEMS = [
   { id: 10, label: "자유게시판" },
   { id: 6, label: "베스트, 워스트 설문" },
   { id: 11, label: "설문 취합" },
+  { id: 12, label: "홈페이지 관리" },
 ];
 
 const POPUP_HIDE_KEY = "wc-survey-leader-popup-hide-202611";
@@ -35,16 +39,31 @@ const isPopupHiddenToday = () => localStorage.getItem(POPUP_HIDE_KEY) === getTod
 
 export default function App() {
   const [activePage, setActivePage] = useState(1);
+  const [siteContent, setSiteContent] = useState(DEFAULT_SITE_CONTENT);
   const [showPopup, setShowPopup] = useState(false);
   const [showWebtoonPopup, setShowWebtoonPopup] = useState(
     () => sessionStorage.getItem(WEBTOON_POPUP_HIDE_KEY) !== "1"
   );
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = await fetchSiteContent();
+        if (!cancelled) setSiteContent(mergeSiteContent(raw));
+      } catch {
+        if (!cancelled) setSiteContent(DEFAULT_SITE_CONTENT);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!siteContent.popup?.enabled) return;
     if (isPopupHiddenToday()) return;
     const timer = setTimeout(() => setShowPopup(true), 600);
     return () => clearTimeout(timer);
-  }, []);
+  }, [siteContent.popup?.enabled, siteContent.popup?.title, siteContent.popup?.period]);
 
   const closePopup = () => setShowPopup(false);
 
@@ -66,25 +85,30 @@ export default function App() {
   return (
     <div className="app">
 
-      {showPopup && (
+      {showPopup && siteContent.popup?.enabled && (
         <div className="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="survey-popup-title">
           <div className="popup-box popup-box--survey">
             <button type="button" className="popup-close" onClick={closePopup} aria-label="닫기">✕</button>
-            <p className="popup-survey-eyebrow">베스트·워스트 관리자 설문</p>
-            <h2 id="survey-popup-title" className="popup-survey-title">여러분의 리더를 추천해주세요.</h2>
-            <p className="popup-survey-period">설문기간 11.16.~11.27</p>
+            <p className="popup-survey-eyebrow">{siteContent.popup.eyebrow}</p>
+            <h2 id="survey-popup-title" className="popup-survey-title">{siteContent.popup.title}</h2>
+            {siteContent.popup.period && (
+              <p className="popup-survey-period">설문기간 {siteContent.popup.period}</p>
+            )}
             <p className="popup-survey-desc">
-              관리자 역량과 리더십에 대한 의견을 들려주세요.<br />
-              베스트·워스트 중 하나만 작성하셔도 됩니다.
+              {String(siteContent.popup.desc || "").split("\n").map((line, i) => (
+                <span key={i}>{line}{i < String(siteContent.popup.desc || "").split("\n").length - 1 ? <br /> : null}</span>
+              ))}
             </p>
-            <p className="popup-survey-prize">5명에 한명 씩 추첨하여 커피쿠폰 발송</p>
+            {siteContent.popup.prize && (
+              <p className="popup-survey-prize">{siteContent.popup.prize}</p>
+            )}
             <div className="popup-actions">
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={() => { setActivePage(6); closePopup(); }}
+                onClick={() => { setActivePage(Number(siteContent.popup.ctaPage) || 6); closePopup(); }}
               >
-                설문 참여하기 →
+                {siteContent.popup.ctaLabel || "설문 참여하기 →"}
               </button>
               <div className="popup-footer-actions">
                 <button type="button" className="popup-dismiss" onClick={dismissPopupToday}>
@@ -143,6 +167,7 @@ export default function App() {
         {activePage === 11 && <PageSurveyAdmin />}
         {activePage === 7 && <PageNotices />}
         {activePage === 10 && <PageBoard />}
+        {activePage === 12 && <PageSiteAdmin />}
       </main>
 
       {/* ── 푸터 ── */}
