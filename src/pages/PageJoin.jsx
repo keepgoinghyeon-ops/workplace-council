@@ -1,4 +1,4 @@
-// ✅ 실제 임원현황 데이터 (2026.06.30 기준)
+// ✅ 실제 임원현황 데이터 (2026.10.15 기준)
 
 const HQ_EXECUTIVES = [
   { role: "의장", name: "김동식", region: "본조 운영진" },
@@ -8,12 +8,12 @@ const HQ_EXECUTIVES = [
 ];
 
 const HQ_UNIT = [
-  { unit: "본부", president: "조성근", vp: "허균", secretary: "김정혜", etc: "염보라" },
+  { unit: "본부", president: "공석", vp: "허균", secretary: "김정혜", etc: "염보라" },
 ];
 
 const BRANCHES = [
   // 서울청
-  { region: "서울청", unit: "서울청", president: "공석", vp: "", secretary: "김정우", etc: "" },
+  { region: "서울청", unit: "서울청", president: "공석", vp: "", secretary: "", etc: "" },
   { region: "서울청", unit: "서울강남", president: "조성웅", vp: "", secretary: "김하림", etc: "" },
   { region: "서울청", unit: "서울동부", president: "이예준", vp: "", secretary: "전예린", etc: "" },
   { region: "서울청", unit: "서울서부", president: "김혜성", vp: "", secretary: "", etc: "" },
@@ -21,30 +21,31 @@ const BRANCHES = [
   { region: "서울청", unit: "서울북부", president: "김성원", vp: "", secretary: "김태완", etc: "" },
   { region: "서울청", unit: "서울관악", president: "이창호", vp: "", secretary: "", etc: "" },
   // 중부청
-  { region: "중부청", unit: "중부청", president: "우승완(휴직)", vp: "", secretary: "안지민", etc: "" },
+  { region: "중부청", unit: "중부청", president: "우승완(휴직)", vp: "", secretary: "최태석", etc: "" },
   { region: "중부청", unit: "인천북부", president: "박태용", vp: "", secretary: "", etc: "" },
   { region: "중부청", unit: "부천", president: "김영배", vp: "", secretary: "박지후", etc: "" },
   // 강원
-  { region: "강원", unit: "강원(춘천)", president: "오기학", vp: "", secretary: "", etc: "" },
-  { region: "강원", unit: "강릉", president: "주성혁", vp: "", secretary: "강승구", etc: "" },
+  { region: "강원", unit: "강원(춘천)", president: "공석", vp: "", secretary: "손승태", etc: "" },
+  { region: "강원", unit: "강릉", president: "박주화", vp: "", secretary: "한현규", etc: "" },
   { region: "강원", unit: "원주", president: "이경록", vp: "", secretary: "박동선", etc: "" },
   { region: "강원", unit: "태백", president: "김민수", vp: "", secretary: "배민기", etc: "" },
-  { region: "강원", unit: "영월", president: "이정우", vp: "", secretary: "", etc: "" },
+  { region: "강원", unit: "영월", president: "", vp: "", secretary: "나유진", etc: "" },
   // 경기청
-  { region: "경기청", unit: "경기청", president: "홍순규", vp: "", secretary: "", etc: "" },
+  { region: "경기청", unit: "경기청", president: "홍순규", vp: "", secretary: "이준현", etc: "" },
   { region: "경기청", unit: "성남", president: "황병의", vp: "조영환", secretary: "김벼리", etc: "박범우(감사)" },
   { region: "경기청", unit: "안양", president: "정윤순", vp: "", secretary: "공석", etc: "서동환" },
   { region: "경기청", unit: "안산", president: "공석", vp: "", secretary: "김민석", etc: "" },
-  { region: "경기청", unit: "의정부", president: "허혜경", vp: "박해룡", secretary: "손민정", etc: "" },
+  { region: "경기청", unit: "의정부", president: "공석", vp: "박해룡", secretary: "최수빈", etc: "" },
   { region: "경기청", unit: "고양", president: "배정돈", vp: "", secretary: "장승식", etc: "" },
   { region: "경기청", unit: "평택", president: "김만수", vp: "", secretary: "공석", etc: "" },
   // 부산청
-  { region: "부산청", unit: "부산청", president: "김성식", vp: "김영미", secretary: "제갈윤", etc: "천민영(총무)" },
+  { region: "부산청", unit: "부산청", president: "공석", vp: "공현도", secretary: "김명진", etc: "김근아" },
   { region: "부산청", unit: "부산동부", president: "공석", vp: "", secretary: "유병욱", etc: "" },
-  { region: "부산청", unit: "부산북부", president: "정명화", vp: "", secretary: "", etc: "김근호(총무)" },
+  { region: "부산청", unit: "부산북부", president: "공석", vp: "", secretary: "", etc: "" },
   { region: "부산청", unit: "창원", president: "최재원", vp: "", secretary: "윤신희", etc: "" },
-  { region: "부산청", unit: "울산", president: "공석", vp: "", secretary: "이송은", etc: "최치환(총무)" },
-  { region: "부산청", unit: "양산", president: "공석", vp: "김길수", secretary: "김병학", etc: "" },
+  { region: "부산청", unit: "울산", president: "공석", vp: "", secretary: "", etc: "박준" },
+  { region: "부산청", unit: "울산동부", president: "전혜현", vp: "", secretary: "", etc: "" },
+  { region: "부산청", unit: "양산", president: "공석", vp: "", secretary: "김병학", etc: "" },
   { region: "부산청", unit: "진주", president: "유재화", vp: "", secretary: "", etc: "박찬곤(총무)" },
   { region: "부산청", unit: "통영", president: "이영란", vp: "", secretary: "서성봉", etc: "김은정" },
   // 대구청
@@ -56,21 +57,21 @@ const BRANCHES = [
   { region: "대구청", unit: "안동", president: "공석", vp: "", secretary: "공석", etc: "" },
   // 대전청
   { region: "대전청", unit: "대전청", president: "이용구", vp: "", secretary: "박재현", etc: "" },
-  { region: "대전청", unit: "청주", president: "양일준", vp: "", secretary: "", etc: "" },
+  { region: "대전청", unit: "청주", president: "양일준", vp: "", secretary: "허한강", etc: "" },
   { region: "대전청", unit: "천안", president: "복기연", vp: "전봉기", secretary: "", etc: "" },
-  { region: "대전청", unit: "충주", president: "공석", vp: "", secretary: "나종남", etc: "" },
+  { region: "대전청", unit: "충주", president: "장윤석", vp: "", secretary: "나종남", etc: "" },
   { region: "대전청", unit: "보령", president: "이승기", vp: "", secretary: "이혜원", etc: "" },
   { region: "대전청", unit: "서산", president: "김기선", vp: "", secretary: "김경주", etc: "" },
   // 노동위원회
-  { region: "노동위원회", unit: "중노위", president: "공석", vp: "", secretary: "박필규", etc: "" },
-  { region: "노동위원회", unit: "서울지노위", president: "신상돈", vp: "", secretary: "조유나", etc: "" },
+  { region: "노동위원회", unit: "중노위", president: "공석", vp: "", secretary: "이지형", etc: "" },
+  { region: "노동위원회", unit: "서울지노위", president: "신상돈", vp: "", secretary: "최서현", etc: "" },
   { region: "노동위원회", unit: "부산지노위", president: "공석", vp: "", secretary: "공석", etc: "" },
-  { region: "노동위원회", unit: "충남지노위", president: "이용우", vp: "", secretary: "공석", etc: "" },
+  { region: "노동위원회", unit: "충남지노위", president: "공석", vp: "김춘숙", secretary: "신재현", etc: "이은규(총무)" },
   { region: "노동위원회", unit: "충북지노위", president: "이학진", vp: "", secretary: "", etc: "" },
   { region: "노동위원회", unit: "경북지노위", president: "김상현", vp: "이정주", secretary: "", etc: "" },
   // 기타기관
   { region: "기타기관", unit: "산심위", president: "김성경", vp: "전재영", secretary: "도경환", etc: "이지은(감사)" },
-  { region: "기타기관", unit: "고객상담센터", president: "김정원", vp: "", secretary: "", etc: "황현지(총무)" },
+  { region: "기타기관", unit: "고객상담센터", president: "정명화", vp: "", secretary: "", etc: "황현지(총무)" },
 ];
 
 const REGION_COLORS = {
@@ -164,7 +165,7 @@ export default function PageJoin() {
         <div className="container">
           <div className="section-header">
             <h2 className="section-title">전국 단위직협 임원현황</h2>
-            <p className="section-sub">2026.06.30 기준 · 총 {BRANCHES.length}개 단위직협</p>
+            <p className="section-sub">2026.10.15 기준 · 총 {BRANCHES.length}개 단위직협</p>
           </div>
 
           {/* 본부 단위직협 현황 */}
