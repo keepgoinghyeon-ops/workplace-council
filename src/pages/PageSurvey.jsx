@@ -129,7 +129,7 @@ export default function PageSurvey() {
               <div className="survey-section">
                 <h3>2. 제출자 정보</h3>
                 <p className="survey-privacy-notice">
-                  중복 설문을 방지하기 위하여 성명, 연락처를 받고 있으며, 취합 관리자는 비밀을 유지하고 익명을 보장합니다.
+                  중복설문(한명의 리더를 한명의 설문자가 다른 내용으로 중복 설문 불가, 한명이 여러명의 리더를 설문하는 거은 가능)을 방지하고, 추첨 이벤트 당첨 선물 문자 발송을 위하여 성명, 연락처를 받고 있습니다. 취합 관리자는 비밀을 유지하고 익명을 보장합니다.
                 </p>
                 <div className="form-group">
                   <label className="form-label">성명 <span className="form-required">*</span></label>
@@ -183,7 +183,7 @@ export default function PageSurvey() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">☞ 그렇게 생각하는 이유 (간략히)</label>
+                  <label className="form-label">☞ 그렇게 생각하는 이유</label>
                   <textarea
                     className="form-textarea"
                     rows={3}
@@ -226,7 +226,7 @@ export default function PageSurvey() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">☞ 그렇게 생각하는 이유 (구체적으로)</label>
+                  <label className="form-label">☞ 그렇게 생각하는 이유</label>
                   <textarea
                     className="form-textarea"
                     rows={4}
