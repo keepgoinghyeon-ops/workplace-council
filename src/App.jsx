@@ -40,6 +40,7 @@ const isPopupHiddenToday = () => localStorage.getItem(POPUP_HIDE_KEY) === getTod
 export default function App() {
   const [activePage, setActivePage] = useState(1);
   const [siteContent, setSiteContent] = useState(DEFAULT_SITE_CONTENT);
+  const [contentReady, setContentReady] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const [showWebtoonPopup, setShowWebtoonPopup] = useState(
     () => sessionStorage.getItem(WEBTOON_POPUP_HIDE_KEY) !== "1"
@@ -53,17 +54,20 @@ export default function App() {
         if (!cancelled) setSiteContent(mergeSiteContent(raw));
       } catch {
         if (!cancelled) setSiteContent(DEFAULT_SITE_CONTENT);
+      } finally {
+        if (!cancelled) setContentReady(true);
       }
     })();
     return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
+    if (!contentReady) return;
     if (!siteContent.popup?.enabled) return;
     if (isPopupHiddenToday()) return;
     const timer = setTimeout(() => setShowPopup(true), 600);
     return () => clearTimeout(timer);
-  }, [siteContent.popup?.enabled, siteContent.popup?.title, siteContent.popup?.period]);
+  }, [contentReady, siteContent.popup?.enabled, siteContent.popup?.title, siteContent.popup?.period]);
 
   const closePopup = () => setShowPopup(false);
 

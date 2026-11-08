@@ -17,7 +17,7 @@ export const DEFAULT_SITE_CONTENT = {
     enabled: true,
     eyebrow: "베스트·워스트 관리자 설문",
     title: "여러분의 리더를 추천해주세요.",
-    period: "11.16.~11.27",
+    period: "",
     desc: "관리자 역량과 리더십에 대한 의견을 들려주세요.\n베스트·워스트 중 하나만 작성하셔도 됩니다.",
     prize: "5명에 한명 씩 추첨하여 커피쿠폰 발송",
     ctaLabel: "설문 참여하기 →",
@@ -26,7 +26,7 @@ export const DEFAULT_SITE_CONTENT = {
   survey: {
     eyebrow: "고용노동부 베스트·워스트 관리자 선정",
     title: "여러분의 리더를 추천해주세요.",
-    period: "11.16.~11.27",
+    period: "",
     heroDesc: "관리자 역량과 리더십에 대한 직원 의견을 수렴하여\n베스트 사례를 공유하고, 워스트 사례를 개선하기 위한 설문입니다.",
     purpose: "본 설문은 고용노동부 직원들의 관리자 역량과 리더십에 대한 의견을 수렴하여 베스트(Best) 사례를 공유하고, 워스트(Worst) 사례를 파악·개선하기 위한 목적으로 실시합니다.",
     instruction: "베스트·워스트 평가는 **둘 중 하나만** 작성하셔도 되며, 항목별 빈칸은 비워 두셔도 제출할 수 있습니다.",
@@ -98,18 +98,39 @@ export const DEFAULT_SITE_CONTENT = {
   ],
 };
 
-export function stripPeriodLines(text) {
+const STALE_PERIOD_RE = /11\s*\.\s*16\s*\.?\s*~\s*11\s*\.\s*27/;
+
+export function isStalePeriod(value) {
+  return STALE_PERIOD_RE.test(String(value || "").replace(/\s/g, " "));
+}
+
+export function extractPeriodFromText(text) {
+  for (const line of String(text || "").split("\n")) {
+    const t = line.trim();
+    const matched = t.match(/^설문기간\s*[:：]?\s*(.+)$/);
+    if (matched) return matched[1].trim();
+  }
+  return "";
+}
+
+export function stripPeriodLines(text, keepPeriod = "") {
+  const keep = String(keepPeriod || "").trim();
   return String(text || "")
     .split("\n")
-    .filter((line) => {
-      const t = line.trim();
-      if (!t) return true;
-      if (/^설문기간\b/.test(t)) return false;
-      if (/^\d{1,2}\s*\.\s*\d{1,2}\s*\.?\s*~\s*\d{1,2}\s*\.\s*\d{1,2}/.test(t)) return false;
-      return true;
+    .map((line) => {
+      let t = line;
+      if (keep) t = t.split(keep).join("");
+      t = t.replace(STALE_PERIOD_RE, "");
+      t = t.replace(/설문기간\s*[:：]?\s*/g, "");
+      return t.replace(/\s{2,}/g, " ").trim();
     })
-    .join("\n")
-    .replace(/^\n+|\n+$/g, "");
+    .filter(Boolean)
+    .join("\n");
+}
+
+function firstNonStalePeriod(values) {
+  const cleaned = values.map((v) => String(v || "").trim()).filter(Boolean);
+  return cleaned.find((v) => !isStalePeriod(v)) || "";
 }
 
 export function mergeSiteContent(raw) {
@@ -121,13 +142,23 @@ export function mergeSiteContent(raw) {
   if (raw.survey && typeof raw.survey === "object") {
     base.survey = { ...base.survey, ...raw.survey };
   }
-  const period = String(raw?.popup?.period || raw?.survey?.period || base.popup.period || "").trim();
-  if (period) {
-    base.popup.period = period;
-    base.survey.period = period;
+  const period = firstNonStalePeriod([
+    raw?.popup?.period,
+    raw?.survey?.period,
+    extractPeriodFromText(raw?.popup?.desc),
+    extractPeriodFromText(raw?.survey?.heroDesc),
+    extractPeriodFromText(raw?.popup?.prize),
+  ]);
+  base.popup.period = period;
+  base.survey.period = period;
+  base.popup.desc = stripPeriodLines(base.popup.desc, period);
+  base.survey.heroDesc = stripPeriodLines(base.survey.heroDesc, period);
+  if (isStalePeriod(base.popup.prize)) {
+    base.popup.prize = stripPeriodLines(base.popup.prize, period);
   }
-  base.popup.desc = stripPeriodLines(base.popup.desc);
-  base.survey.heroDesc = stripPeriodLines(base.survey.heroDesc);
+  if (isStalePeriod(base.survey.prize)) {
+    base.survey.prize = stripPeriodLines(base.survey.prize, period);
+  }
   if (raw.orgAsOf) base.orgAsOf = String(raw.orgAsOf);
   if (Array.isArray(raw.hqExecutives) && raw.hqExecutives.length) {
     base.hqExecutives = raw.hqExecutives.map((e) => ({

@@ -1,3 +1,5 @@
+import { isStalePeriod } from "../data/defaultSiteContent";
+
 const API_URL = import.meta.env.VITE_NOTICES_API_URL?.trim();
 const LOCAL_KEY = "wc-notices";
 const AUTH_KEY = "wc-notices-admin-auth";
@@ -253,14 +255,45 @@ function writeLocalSiteContent(content) {
   localStorage.setItem(SITE_CONTENT_KEY, JSON.stringify(content));
 }
 
+function coerceSiteContent(value) {
+  if (!value) return null;
+  let parsed = value;
+  if (typeof value === "string") {
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  if (!parsed.popup && !parsed.survey && !parsed.hqExecutives && !parsed.branches) return null;
+  return parsed;
+}
+
+function preferSiteContent(sheet, notice) {
+  if (!sheet) return notice || null;
+  if (!notice) return sheet;
+  const sheetPeriod = sheet?.popup?.period || sheet?.survey?.period || "";
+  const noticePeriod = notice?.popup?.period || notice?.survey?.period || "";
+  if (isStalePeriod(sheetPeriod) && noticePeriod && !isStalePeriod(noticePeriod)) {
+    return {
+      ...sheet,
+      ...notice,
+      popup: { ...(sheet.popup || {}), ...(notice.popup || {}) },
+      survey: { ...(sheet.survey || {}), ...(notice.survey || {}) },
+    };
+  }
+  return {
+    ...notice,
+    ...sheet,
+    popup: { ...(notice.popup || {}), ...(sheet.popup || {}) },
+    survey: { ...(notice.survey || {}), ...(sheet.survey || {}) },
+  };
+}
+
 function parseSiteContentNotice(notice) {
   if (!notice) return null;
-  try {
-    const parsed = JSON.parse(notice.content || "");
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch {
-    return null;
-  }
+  return coerceSiteContent(notice.content);
 }
 
 async function fetchSiteContentFromNotices() {
@@ -292,42 +325,41 @@ async function saveSiteContentViaNotice(content, adminToken) {
 
 export async function fetchSiteContent() {
   if (API_URL) {
+    let sheet = null;
     try {
       const result = await apiGet({ action: "siteContent" });
       if (result.success) {
-        if (result.content) writeLocalSiteContent(result.content);
-        if (result.content) return result.content;
-      }
-      if (result.error && !/unknown action/i.test(result.error)) {
+        sheet = coerceSiteContent(result.content);
+      } else if (result.error && !/unknown action/i.test(result.error)) {
         throw new Error(result.error);
       }
     } catch (err) {
       if (!/unknown action/i.test(err.message || "")) {
-        const cached = readLocalSiteContent();
-        if (cached) return cached;
         try {
-          const fromNotice = await fetchSiteContentFromNotices();
-          if (fromNotice) {
-            writeLocalSiteContent(fromNotice);
-            return fromNotice;
+          const fromNotice = coerceSiteContent(await fetchSiteContentFromNotices());
+          const cached = readLocalSiteContent();
+          const chosen = preferSiteContent(null, fromNotice) || cached;
+          if (chosen) {
+            writeLocalSiteContent(chosen);
+            return chosen;
           }
         } catch {
-          /* fall through */
+          const cached = readLocalSiteContent();
+          if (cached) return cached;
         }
         throw normalizeNetworkError(err);
       }
     }
 
+    let notice = null;
     try {
-      const fromNotice = await fetchSiteContentFromNotices();
-      if (fromNotice) {
-        writeLocalSiteContent(fromNotice);
-        return fromNotice;
-      }
+      notice = coerceSiteContent(await fetchSiteContentFromNotices());
     } catch {
       /* ignore */
     }
-    return readLocalSiteContent();
+    const chosen = preferSiteContent(sheet, notice) || readLocalSiteContent();
+    if (chosen) writeLocalSiteContent(chosen);
+    return chosen;
   }
   return readLocalSiteContent();
 }
